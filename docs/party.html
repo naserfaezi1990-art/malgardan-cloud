@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>گزارش تسویه</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root { --brass:#b8925a; --ink:#3a2f26; --paper:#faf6ef; --paper-2:#f1e9d8; --line:#e3d5b8; --ok:#3f7d4f; --warn:#b3261e; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:'Vazirmatn',sans-serif; background:var(--paper); color:var(--ink); padding:20px; }
+.wrap { max-width:720px; margin:0 auto; }
+h1 { font-size:20px; margin:0 0 4px; }
+.sub { color:#8a7a63; font-size:13px; margin-bottom:20px; }
+.card { background:var(--paper-2); border:1px solid var(--line); border-radius:14px; padding:18px; margin-bottom:16px; }
+.card h2 { font-size:16px; margin:0 0 12px; }
+.progress { height:10px; background:#e9ddc4; border-radius:6px; overflow:hidden; margin:10px 0; }
+.progress-bar { height:100%; background:var(--brass); border-radius:6px; }
+.stats { display:flex; justify-content:space-between; font-size:13px; color:#6b5c47; }
+.stats b { color:var(--ink); font-size:15px; }
+table { width:100%; border-collapse:collapse; margin-top:14px; font-size:13px; }
+th,td { padding:8px 6px; text-align:right; border-bottom:1px solid var(--line); }
+th { color:#8a7a63; font-weight:600; }
+.status { padding:2px 8px; border-radius:20px; font-size:11px; }
+.status.confirmed { background:#e2f0e4; color:var(--ok); }
+.status.returned { background:#fbe4e2; color:var(--warn); }
+.empty { text-align:center; color:#8a7a63; padding:40px 0; }
+.updated { text-align:center; font-size:12px; color:#8a7a63; margin-top:24px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="empty">در حال بارگذاری...</div></div>
+<script>
+const API = 'https://malgardan-cloud.naserfaezi1990.workers.dev';
+const token = new URLSearchParams(location.search).get('token') || '';
+function money(n){ return Number(n||0).toLocaleString('en-US'); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+async function load(){
+const app = document.getElementById('app');
+if(!token){ app.innerHTML = '<div class="empty">لینک نامعتبر است.</div>'; return; }
+try {
+const res = await fetch(API + '/party?token=' + encodeURIComponent(token));
+const data = await res.json();
+if(!res.ok){ app.innerHTML = '<div class="empty">' + esc(data.error||'خطا') + '</div>'; return; }
+render(data);
+} catch(e) {
+app.innerHTML = '<div class="empty">ارتباط برقرار نشد. بعداً دوباره امتحان کن.</div>';
+}
+}
+function render(data){
+const app = document.getElementById('app');
+const partyName = (data.party && data.party.party_name) || '';
+const clientName = (data.party && data.party.client_name) || '';
+let html = '<h1>سلام ' + esc(partyName) + '</h1><div class="sub">' + esc(clientName) + '</div>';
+if(!data.accounts.length){
+html += '<div class="empty">هنوز حسابی برای شما ثبت نشده است.</div>';
+} else {
+for(const a of data.accounts){
+const pct = a.progress_percent==null ? null : Math.min(100, a.progress_percent);
+const receiptsForAccount = data.receipts.filter(function(r){ return r.account_id === a.account_id; });
+html += '<div class="card"><h2>' + esc(a.owner_name) + '</h2>';
+if(pct!=null){
+html += '<div class="progress"><div class="progress-bar" style="width:' + pct + '%"></div></div>';
+html += '<div class="stats"><span>واریزی: <b>' + money(a.confirmed_total) + '</b> ریال</span><span>سقف: <b>' + money(a.target_amount) + '</b> ریال</span></div>';
+} else {
+html += '<div class="stats"><span>مجموع واریزی: <b>' + money(a.confirmed_total) + '</b> ریال</span></div>';
+}
+if(receiptsForAccount.length){
+html += '<table><thead><tr><th>مبلغ</th><th>کد پیگیری</th><th>تاریخ</th><th>وضعیت</th></tr></thead><tbody>';
+for(const r of receiptsForAccount){
+html += '<tr><td>' + money(r.amount) + '</td><td>' + esc(r.tracking_code||'—') + '</td><td>' + esc(r.date_jalali||'') + '</td><td><span class="status ' + r.status + '">' + (r.status==='confirmed'?'تأییدشده':'برگشتی') + '</span></td></tr>';
+}
+html += '</tbody></table>';
+}
+html += '</div>';
+}
+}
+html += '<div class="updated">آخرین به‌روزرسانی: ' + new Date().toLocaleString('fa-IR') + '</div>';
+app.innerHTML = html;
+}
+load();
+</script>
+</body>
+</html>
