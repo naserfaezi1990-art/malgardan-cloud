@@ -33,14 +33,10 @@ const accounts = await sql.query('SELECT * FROM get_admin_accounts($1)', [token]
 const receipts = await sql.query('SELECT * FROM get_admin_receipts($1, $2)', [token, date]);
 return json({ accounts, receipts });
 }
-if (url.pathname === '/debug') {
-const r = await sql.query('SELECT 1 AS ok');
-return json({ ok: r });
-}
 return json({ error: 'not found' }, 404);
 } catch (err) {
 console.error(String((err && err.stack) || err));
-return json({ error: 'خطای داخلی سرور', detail: String((err && err.message) || err) }, 500);
+return json({ error: 'خطای داخلی سرور' }, 500);
 }
 }
 };
