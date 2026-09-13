@@ -118,7 +118,8 @@ for(const a of accounts){
 const pct = a.progress_percent;
 const idle = idleHours(a.last_receipt_at);
 const isIdle = idle!=null && idle>=3;
-html += '<div class="card ' + (isIdle?'idle':'') + '"><div class="card-top"><div><div class="card-title">' + esc(a.owner_name) + '</div><div class="card-client">' + esc(a.client_name) + '</div></div>';
+const route = (a.source_party_name ? esc(a.source_party_name) : '—') + ' ← ' + (a.destination_party_name ? esc(a.destination_party_name) : '—');
+html += '<div class="card ' + (isIdle?'idle':'') + '"><div class="card-top"><div><div class="card-title">' + esc(a.owner_name) + '</div><div class="card-client">' + esc(a.client_name) + ' · ' + route + '</div></div>';
 if(isIdle) html += '<span class="badge idle">' + idle + ' ساعت راکد</span>';
 else if(idle!=null) html += '<span class="badge">' + idle + ' ساعت پیش</span>';
 html += '</div>';
@@ -137,9 +138,10 @@ html += '<div class="section-title">فیش‌های این روز (' + receipts.
 if(!receipts.length){
 html += '<div class="empty">فیشی برای این روز ثبت نشده است.</div>';
 } else {
-html += '<table><thead><tr><th>حساب</th><th>واریزکننده</th><th>مبلغ</th><th>کد پیگیری</th><th>وضعیت</th></tr></thead><tbody>';
+html += '<table><thead><tr><th>حساب</th><th>مسیر</th><th>واریزکننده</th><th>مبلغ</th><th>کد پیگیری</th><th>وضعیت</th></tr></thead><tbody>';
 for(const r of receipts){
-html += '<tr><td>' + esc(r.account_owner) + '</td><td>' + esc(r.payer_name||'—') + '</td><td>' + money(r.amount) + '</td><td>' + esc(r.tracking_code||'—') + '</td><td><span class="status ' + r.status + '">' + (r.status==='confirmed'?'تأییدشده':'برگشتی') + '</span></td></tr>';
+const rroute = (r.source_party_name ? esc(r.source_party_name) : '—') + ' ← ' + (r.destination_party_name ? esc(r.destination_party_name) : '—');
+html += '<tr><td>' + esc(r.account_owner) + '</td><td>' + rroute + '</td><td>' + esc(r.payer_name||'—') + '</td><td>' + money(r.amount) + '</td><td>' + esc(r.tracking_code||'—') + '</td><td><span class="status ' + r.status + '">' + (r.status==='confirmed'?'تأییدشده':'برگشتی') + '</span></td></tr>';
 }
 html += '</tbody></table>';
 }
