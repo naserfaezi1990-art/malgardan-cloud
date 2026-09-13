@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>اتاق فرمان</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root { --bg:#0f1115; --panel:#181b22; --panel-2:#20242e; --line:#2b303c; --gold:#d4af6a; --ink:#e8e6e1; --dim:#8b93a3; --ok:#4caf6a; --warn:#e05a4e; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:'Vazirmatn',sans-serif; background:var(--bg); color:var(--ink); padding:24px; }
+.wrap { max-width:960px; margin:0 auto; }
+.top { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+h1 { font-size:20px; margin:0; font-weight:700; }
+.tabs { display:flex; gap:8px; background:var(--panel); padding:4px; border-radius:10px; }
+.tabs button { background:none; border:none; color:var(--dim); padding:8px 16px; border-radius:8px; font-family:inherit; font-size:13px; cursor:pointer; }
+.tabs button.active { background:var(--gold); color:#1a1408; font-weight:600; }
+.hero { background:linear-gradient(135deg,var(--panel-2),var(--panel)); border:1px solid var(--line); border-radius:16px; padding:24px; margin-bottom:20px; }
+.hero-top { display:flex; justify-content:space-between; margin-bottom:12px; }
+.hero-label { color:var(--dim); font-size:13px; }
+.hero-pct { font-size:36px; font-weight:800; color:var(--gold); }
+.hero-bar { height:14px; background:#2b303c; border-radius:8px; overflow:hidden; }
+.hero-bar-fill { height:100%; background:linear-gradient(90deg,#d4af6a,#f0d28f); border-radius:8px; }
+.section-title { font-size:14px; color:var(--dim); margin:28px 0 12px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
+.card.idle { border-color:var(--warn); }
+.card-top { display:flex; justify-content:space-between; align-items:start; margin-bottom:10px; }
+.card-title { font-size:14px; font-weight:600; }
+.card-client { font-size:11px; color:var(--dim); }
+.badge { font-size:10px; padding:2px 8px; border-radius:20px; background:#2b303c; color:var(--dim); white-space:nowrap; }
+.badge.idle { background:rgba(224,90,78,.15); color:var(--warn); }
+.progress { height:8px; background:#2b303c; border-radius:6px; overflow:hidden; margin:10px 0 8px; }
+.progress-bar { height:100%; background:var(--gold); border-radius:6px; }
+.card-stats { display:flex; justify-content:space-between; font-size:12px; color:var(--dim); }
+.card-stats b { color:var(--ink); }
+.empty { text-align:center; color:var(--dim); padding:60px 0; }
+.updated { text-align:center; font-size:11px; color:var(--dim); margin-top:24px; }
+table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden; font-size:13px; }
+th,td { padding:10px 12px; text-align:right; border-bottom:1px solid var(--line); }
+th { color:var(--dim); font-weight:600; font-size:12px; }
+tr:last-child td { border-bottom:none; }
+.status { padding:2px 8px; border-radius:20px; font-size:11px; }
+.status.confirmed { background:rgba(76,175,106,.15); color:var(--ok); }
+.status.returned { background:rgba(224,90,78,.15); color:var(--warn); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="top">
+<h1>اتاق فرمان مالگردان</h1>
+<div class="tabs">
+<button id="btnToday" class="active">امروز</button>
+<button id="btnYesterday">دیروز</button>
+</div>
+</div>
+<div id="app"><div class="empty">در حال بارگذاری...</div></div>
+</div>
+<script>
+const API = 'https://malgardan-cloud.naserfaezi1990.workers.dev';
+const token = new URLSearchParams(location.search).get('token') || '';
+function money(n){ return Number(n||0).toLocaleString('en-US'); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+function gregorianToJalali(gy, gm, gd){
+const g_d_m = [0,31,59,90,120,151,181,212,243,273,304,334];
+let gy2 = (gm > 2) ? (gy + 1) : gy;
+let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+let jy = -1595 + (33 * Math.floor(days / 12053));
+days %= 12053;
+jy += 4 * Math.floor(days / 1461);
+days %= 1461;
+if (days > 365) { jy += Math.floor((days - 1) / 365); days = (days - 1) % 365; }
+let jm, jd;
+if (days < 186) { jm = 1 + Math.floor(days / 31); jd = 1 + (days % 31); }
+else { jm = 7 + Math.floor((days - 186) / 30); jd = 1 + ((days - 186) % 30); }
+return jy + '/' + String(jm).padStart(2,'0') + '/' + String(jd).padStart(2,'0');
+}
+function jalaliDateFor(offsetDays){
+const d = new Date(Date.now() + offsetDays*86400000);
+return gregorianToJalali(d.getFullYear(), d.getMonth()+1, d.getDate());
+}
+function idleHours(lastReceiptAt){
+if(!lastReceiptAt) return null;
+const iso = lastReceiptAt.replace(' ','T') + 'Z';
+const diffMs = Date.now() - new Date(iso).getTime();
+return Math.max(0, Math.floor(diffMs/3600000));
+}
+async function load(date){
+const app = document.getElementById('app');
+if(!token){ app.innerHTML = '<div class="empty">دسترسی نامعتبر است.</div>'; return; }
+app.innerHTML = '<div class="empty">در حال بارگذاری...</div>';
+try {
+let url = API + '/admin?token=' + encodeURIComponent(token);
+if(date) url += '&date=' + encodeURIComponent(date);
+const res = await fetch(url);
+const data = await res.json();
+if(!res.ok){ app.innerHTML = '<div class="empty">' + esc(data.error||'خطا') + '</div>'; return; }
+render(data);
+} catch(e) {
+app.innerHTML = '<div class="empty">ارتباط برقرار نشد.</div>';
+}
+}
+function render(data){
+const app = document.getElementById('app');
+const accounts = (data.accounts||[]).slice().sort(function(a,b){ return (a.progress_percent==null?101:a.progress_percent)-(b.progress_percent==null?101:b.progress_percent); });
+const limited = accounts.filter(function(a){ return a.progress_percent!=null; });
+const totalTarget = limited.reduce(function(s,a){ return s+Number(a.target_amount||0); },0);
+const totalConfirmed = limited.reduce(function(s,a){ return s+Number(a.confirmed_total||0); },0);
+const overallPct = totalTarget>0 ? Math.min(100, Math.round(totalConfirmed*100/totalTarget)) : 0;
+let html = '<div class="hero"><div class="hero-top"><span class="hero-label">درصد تکمیل کل حساب‌های سقف‌دار</span><span class="hero-pct">' + overallPct + '%</span></div><div class="hero-bar"><div class="hero-bar-fill" style="width:' + overallPct + '%"></div></div></div>';
+if(!accounts.length){
+html += '<div class="empty">حسابی برای نمایش وجود ندارد.</div>';
+} else {
+html += '<div class="grid">';
+for(const a of accounts){
+const pct = a.progress_percent;
+const idle = idleHours(a.last_receipt_at);
+const isIdle = idle!=null && idle>=3;
+html += '<div class="card ' + (isIdle?'idle':'') + '"><div class="card-top"><div><div class="card-title">' + esc(a.owner_name) + '</div><div class="card-client">' + esc(a.client_name) + '</div></div>';
+if(isIdle) html += '<span class="badge idle">' + idle + ' ساعت راکد</span>';
+else if(idle!=null) html += '<span class="badge">' + idle + ' ساعت پیش</span>';
+html += '</div>';
+if(pct!=null){
+html += '<div class="progress"><div class="progress-bar" style="width:' + Math.min(100,pct) + '%"></div></div>';
+html += '<div class="card-stats"><span>واریزی: <b>' + money(a.confirmed_total) + '</b></span><span>سقف: <b>' + money(a.target_amount) + '</b></span></div>';
+} else {
+html += '<div class="card-stats"><span>مجموع واریزی: <b>' + money(a.confirmed_total) + '</b> ریال</span></div>';
+}
+html += '</div>';
+}
+html += '</div>';
+}
+const receipts = data.receipts||[];
+html += '<div class="section-title">فیش‌های این روز (' + receipts.length + ' مورد)</div>';
+if(!receipts.length){
+html += '<div class="empty">فیشی برای این روز ثبت نشده است.</div>';
+} else {
+html += '<table><thead><tr><th>حساب</th><th>واریزکننده</th><th>مبلغ</th><th>کد پیگیری</th><th>وضعیت</th></tr></thead><tbody>';
+for(const r of receipts){
+html += '<tr><td>' + esc(r.account_owner) + '</td><td>' + esc(r.payer_name||'—') + '</td><td>' + money(r.amount) + '</td><td>' + esc(r.tracking_code||'—') + '</td><td><span class="status ' + r.status + '">' + (r.status==='confirmed'?'تأییدشده':'برگشتی') + '</span></td></tr>';
+}
+html += '</tbody></table>';
+}
+html += '<div class="updated">آخرین به‌روزرسانی: ' + new Date().toLocaleString('fa-IR') + '</div>';
+app.innerHTML = html;
+}
+document.getElementById('btnToday').onclick = function(){
+document.getElementById('btnToday').classList.add('active');
+document.getElementById('btnYesterday').classList.remove('active');
+load(jalaliDateFor(0));
+};
+document.getElementById('btnYesterday').onclick = function(){
+document.getElementById('btnYesterday').classList.add('active');
+document.getElementById('btnToday').classList.remove('active');
+load(jalaliDateFor(-1));
+};
+load(jalaliDateFor(0));
+</script>
+</body>
+</html>
