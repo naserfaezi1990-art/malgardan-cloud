@@ -37,6 +37,8 @@ const API = 'https://malgardan-cloud.naserfaezi1990.workers.dev';
 const token = new URLSearchParams(location.search).get('token') || '';
 function money(n){ return Number(n||0).toLocaleString('en-US'); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+const FA_DIGITS = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+function toFaDigits(v){ return String(v==null?'':v).replace(/\d/g, function(d){ return FA_DIGITS[Number(d)]; }); }
 async function load(){
 const app = document.getElementById('app');
 if(!token){ app.innerHTML = '<div class="empty">لینک نامعتبر است.</div>'; return; }
@@ -68,10 +70,10 @@ html += '<div class="stats"><span>واریزی: <b>' + money(a.confirmed_total) 
 html += '<div class="stats"><span>مجموع واریزی: <b>' + money(a.confirmed_total) + '</b> ریال</span></div>';
 }
 if(receiptsForAccount.length){
-html += '<table><thead><tr><th>مبلغ</th><th>کد پیگیری</th><th>تاریخ</th><th>وضعیت</th></tr></thead><tbody>';
-for(const r of receiptsForAccount){
-html += '<tr><td>' + money(r.amount) + '</td><td>' + esc(r.tracking_code||'—') + '</td><td>' + esc(r.date_jalali||'') + '</td><td><span class="status ' + r.status + '">' + (r.status==='confirmed'?'تأییدشده':'برگشتی') + '</span></td></tr>';
-}
+html += '<table><thead><tr><th>ردیف</th><th>مبلغ</th><th>کد پیگیری</th><th>تاریخ</th><th>وضعیت</th></tr></thead><tbody>';
+receiptsForAccount.forEach(function(r, i){
+html += '<tr><td>' + toFaDigits(i+1) + '</td><td>' + money(r.amount) + '</td><td>' + esc(r.tracking_code||'—') + '</td><td>' + toFaDigits(esc(r.date_jalali||'')) + '</td><td><span class="status ' + r.status + '">' + (r.status==='confirmed'?'تأییدشده':'برگشتی') + '</span></td></tr>';
+});
 html += '</tbody></table>';
 }
 html += '</div>';

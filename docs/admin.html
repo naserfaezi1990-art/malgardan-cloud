@@ -27,6 +27,7 @@ h1 { font-size:20px; margin:0; font-weight:700; }
 .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }
 .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
 .card.idle { border-color:var(--warn); }
+.card.selected { border-color:var(--gold); box-shadow:0 0 0 1px var(--gold); }
 .card-top { display:flex; justify-content:space-between; align-items:start; margin-bottom:10px; }
 .card-title { font-size:14px; font-weight:600; }
 .card-client { font-size:11px; color:var(--dim); }
@@ -102,9 +103,21 @@ render(data);
 app.innerHTML = '<div class="empty">ارتباط برقرار نشد.</div>';
 }
 }
+let selectedAccountId = null;
+let lastData = null;
 function render(data){
+lastData = data;
 const app = document.getElementById('app');
 const accounts = (data.accounts||[]).slice().sort(function(a,b){ return (a.progress_percent==null?101:a.progress_percent)-(b.progress_percent==null?101:b.progress_percent); });
+// data.accounts کل عمر حسابه (همیشه یکسان بین امروز/دیروز)؛ فقط data.receipts طبق تب فعلی
+// فیلتر شده -- پس مجموع/تعداد «همین روز» رو خودمون از روی receipts می‌سازیم، نه accounts.
+const todayConfirmedByAccount = {}, todayCountByAccount = {};
+(data.receipts||[]).forEach(function(r){
+if(r.status==='confirmed'){
+todayConfirmedByAccount[r.account_id] = (todayConfirmedByAccount[r.account_id]||0) + Number(r.amount||0);
+todayCountByAccount[r.account_id] = (todayCountByAccount[r.account_id]||0) + 1;
+}
+});
 const limited = accounts.filter(function(a){ return a.progress_percent!=null; });
 const totalTarget = limited.reduce(function(s,a){ return s+Number(a.target_amount||0); },0);
 const totalConfirmed = limited.reduce(function(s,a){ return s+Number(a.confirmed_total||0); },0);
@@ -119,22 +132,25 @@ const pct = a.progress_percent;
 const idle = idleHours(a.last_receipt_at);
 const isIdle = idle!=null && idle>=3;
 const route = (a.source_party_name ? esc(a.source_party_name) : '—') + ' ← ' + (a.destination_party_name ? esc(a.destination_party_name) : '—');
-html += '<div class="card ' + (isIdle?'idle':'') + '"><div class="card-top"><div><div class="card-title">' + esc(a.owner_name) + '</div><div class="card-client">' + esc(a.client_name) + ' · ' + route + '</div></div>';
+const todaySum = todayConfirmedByAccount[a.id]||0, todayCount = todayCountByAccount[a.id]||0;
+const isSelected = selectedAccountId===a.id;
+html += '<div class="card ' + (isIdle?'idle':'') + (isSelected?' selected':'') + '" data-account-id="' + a.id + '" style="cursor:pointer" title="برای دیدن فقط فیش‌های این حساب کلیک کن"><div class="card-top"><div><div class="card-title">' + esc(a.owner_name) + '</div><div class="card-client">' + esc(a.client_name) + ' · ' + route + '</div></div>';
 if(isIdle) html += '<span class="badge idle">' + idle + ' ساعت راکد</span>';
 else if(idle!=null) html += '<span class="badge">' + idle + ' ساعت پیش</span>';
 html += '</div>';
 if(pct!=null){
 html += '<div class="progress"><div class="progress-bar" style="width:' + Math.min(100,pct) + '%"></div></div>';
-html += '<div class="card-stats"><span>واریزی: <b>' + money(a.confirmed_total) + '</b></span><span>سقف: <b>' + money(a.target_amount) + '</b></span></div>';
+html += '<div class="card-stats"><span title="مجموع کل عمر این حساب">کل واریزی: <b>' + money(a.confirmed_total) + '</b></span><span>سقف: <b>' + money(a.target_amount) + '</b></span></div>';
 } else {
-html += '<div class="card-stats"><span>مجموع واریزی: <b>' + money(a.confirmed_total) + '</b> ریال</span></div>';
+html += '<div class="card-stats"><span title="مجموع کل عمر این حساب">کل واریزی: <b>' + money(a.confirmed_total) + '</b> ریال</span></div>';
 }
+html += '<div class="card-stats" style="margin-top:6px"><span>واریزی این روز: <b>' + money(todaySum) + '</b></span><span>' + todayCount + ' فیش این روز</span></div>';
 html += '</div>';
 }
 html += '</div>';
 }
-const receipts = data.receipts||[];
-html += '<div class="section-title">فیش‌های این روز (' + receipts.length + ' مورد)</div>';
+const receipts = selectedAccountId ? (data.receipts||[]).filter(function(r){ return r.account_id===selectedAccountId; }) : (data.receipts||[]);
+html += '<div class="section-title">فیش‌های این روز (' + receipts.length + ' مورد)' + (selectedAccountId?' <a href="#" id="clearAccountFilter" style="color:var(--gold);font-size:12px;margin-right:10px">نمایش همه حساب‌ها</a>':'') + '</div>';
 if(!receipts.length){
 html += '<div class="empty">فیشی برای این روز ثبت نشده است.</div>';
 } else {
@@ -148,6 +164,16 @@ html += '</tbody></table>';
 html += '<div class="updated">آخرین به‌روزرسانی: ' + new Date().toLocaleString('fa-IR') + '</div>';
 app.innerHTML = html;
 }
+document.getElementById('app').addEventListener('click', function(e){
+const clear = e.target.closest('#clearAccountFilter');
+if(clear){ e.preventDefault(); selectedAccountId = null; if(lastData) render(lastData); return; }
+const card = e.target.closest('[data-account-id]');
+if(card && lastData){
+const id = Number(card.getAttribute('data-account-id'));
+selectedAccountId = selectedAccountId===id ? null : id;
+render(lastData);
+}
+});
 document.getElementById('btnToday').onclick = function(){
 document.getElementById('btnToday').classList.add('active');
 document.getElementById('btnYesterday').classList.remove('active');
