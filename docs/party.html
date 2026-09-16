@@ -28,6 +28,12 @@ th { color:#8a7a63; font-weight:600; }
 .status.returned { background:#fbe4e2; color:var(--warn); }
 .empty { text-align:center; color:#8a7a63; padding:40px 0; }
 .updated { text-align:center; font-size:12px; color:#8a7a63; margin-top:24px; }
+.remaining { display:flex; justify-content:space-between; font-size:13px; color:#6b5c47; margin-top:6px; padding-top:8px; border-top:1px dashed var(--line); }
+.remaining b { color:var(--brass); font-size:15px; }
+.day-tag { font-size:11px; color:#8a7a63; background:#fff; border:1px solid var(--line); border-radius:20px; padding:2px 10px; }
+.history-toggle { text-align:center; margin:8px 0 16px; }
+.history-toggle a { color:#8a7a63; font-size:12px; text-decoration:underline; cursor:pointer; }
+.history-card { opacity:.75; }
 </style>
 </head>
 <body>
@@ -39,6 +45,26 @@ function money(n){ return Number(n||0).toLocaleString('en-US'); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
 const FA_DIGITS = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
 function toFaDigits(v){ return String(v==null?'':v).replace(/\d/g, function(d){ return FA_DIGITS[Number(d)]; }); }
+function gregorianToJalali(gy, gm, gd){
+const g_d_m = [0,31,59,90,120,151,181,212,243,273,304,334];
+let gy2 = (gm > 2) ? (gy + 1) : gy;
+let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+let jy = -1595 + (33 * Math.floor(days / 12053));
+days %= 12053;
+jy += 4 * Math.floor(days / 1461);
+days %= 1461;
+if (days > 365) { jy += Math.floor((days - 1) / 365); days = (days - 1) % 365; }
+let jm, jd;
+if (days < 186) { jm = 1 + Math.floor(days / 31); jd = 1 + (days % 31); }
+else { jm = 7 + Math.floor((days - 186) / 30); jd = 1 + ((days - 186) % 30); }
+return jy + '/' + String(jm).padStart(2,'0') + '/' + String(jd).padStart(2,'0');
+}
+function todayJalali(){
+const d = new Date();
+return gregorianToJalali(d.getFullYear(), d.getMonth()+1, d.getDate());
+}
+function toAsciiDigits(v){ return String(v==null?'':v).replace(/[۰-۹]/g, function(d){ return String(FA_DIGITS.indexOf(d)); }); }
+let showHistory = false;
 async function load(){
 const app = document.getElementById('app');
 if(!token){ app.innerHTML = '<div class="empty">لینک نامعتبر است.</div>'; return; }
@@ -51,23 +77,21 @@ render(data);
 app.innerHTML = '<div class="empty">ارتباط برقرار نشد. بعداً دوباره امتحان کن.</div>';
 }
 }
-function render(data){
-const app = document.getElementById('app');
-const partyName = (data.party && data.party.party_name) || '';
-const clientName = (data.party && data.party.client_name) || '';
-let html = '<h1>سلام ' + esc(partyName) + '</h1><div class="sub">' + esc(clientName) + '</div>';
-if(!data.accounts.length){
-html += '<div class="empty">هنوز حسابی برای شما ثبت نشده است.</div>';
-} else {
-for(const a of data.accounts){
-const pct = a.progress_percent==null ? null : Math.min(100, a.progress_percent);
+let lastData = null;
+function accountCard(a, data, isHistory){
+const hasTarget = Number(a.target_amount||0) > 0;
+const pct = hasTarget ? Math.min(100, a.progress_percent==null ? 0 : a.progress_percent) : null;
 const receiptsForAccount = data.receipts.filter(function(r){ return r.account_id === a.account_id; });
-html += '<div class="card"><h2>' + esc(a.owner_name) + '</h2>';
+let html = '<div class="card' + (isHistory?' history-card':'') + '"><h2>' + esc(a.owner_name)
+  + (a.valid_jalali ? ' <span class="day-tag">' + a.valid_jalali + '</span>' : '') + '</h2>';
 if(pct!=null){
 html += '<div class="progress"><div class="progress-bar" style="width:' + pct + '%"></div></div>';
 html += '<div class="stats"><span>واریزی: <b>' + money(a.confirmed_total) + '</b> ریال</span><span>سقف: <b>' + money(a.target_amount) + '</b> ریال</span></div>';
 } else {
 html += '<div class="stats"><span>مجموع واریزی: <b>' + money(a.confirmed_total) + '</b> ریال</span></div>';
+}
+if(a.remaining_amount!=null){
+html += '<div class="remaining"><span>باقیمانده تا تسویه‌ی کامل</span><b>' + money(a.remaining_amount) + ' ریال</b></div>';
 }
 if(receiptsForAccount.length){
 html += '<table><thead><tr><th>ردیف</th><th>مبلغ</th><th>کد پیگیری</th><th>تاریخ</th><th>وضعیت</th></tr></thead><tbody>';
@@ -77,11 +101,38 @@ html += '<tr><td>' + toFaDigits(i+1) + '</td><td>' + money(r.amount) + '</td><td
 html += '</tbody></table>';
 }
 html += '</div>';
+return html;
+}
+function render(data){
+lastData = data;
+const app = document.getElementById('app');
+const partyName = (data.party && data.party.party_name) || '';
+const clientName = (data.party && data.party.client_name) || '';
+let html = '<h1>سلام ' + esc(partyName) + '</h1><div class="sub">' + esc(clientName) + '</div>';
+const today = todayJalali();
+const allAccounts = data.accounts || [];
+const todayAccounts = allAccounts.filter(function(a){ return toAsciiDigits(a.valid_jalali) === today; });
+const otherAccounts = allAccounts.filter(function(a){ return toAsciiDigits(a.valid_jalali) !== today; });
+if(!allAccounts.length){
+html += '<div class="empty">هنوز حسابی برای شما ثبت نشده است.</div>';
+} else {
+if(!todayAccounts.length){
+html += '<div class="empty">امروز حسابی برای شما ثبت نشده است.</div>';
+} else {
+for(const a of todayAccounts){ html += accountCard(a, data, false); }
+}
+if(otherAccounts.length){
+html += '<div class="history-toggle"><a id="toggleHistory">' + (showHistory ? 'بستن حساب‌های روزهای قبل' : 'نمایش حساب‌های روزهای قبل (' + toFaDigits(otherAccounts.length) + ')') + '</a></div>';
+if(showHistory){
+for(const a of otherAccounts){ html += accountCard(a, data, true); }
+}
 }
 }
 html += '<div class="updated">آخرین به‌روزرسانی: ' + new Date().toLocaleString('fa-IR') + '</div>';
 html += '<div class="updated" style="font-weight:600;color:var(--brass)">تهیه‌شده با مال‌گردان</div>';
 app.innerHTML = html;
+const toggle = document.getElementById('toggleHistory');
+if(toggle) toggle.onclick = function(){ showHistory = !showHistory; render(lastData); };
 }
 load();
 </script>

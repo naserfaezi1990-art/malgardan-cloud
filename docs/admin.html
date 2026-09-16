@@ -82,6 +82,8 @@ function jalaliDateFor(offsetDays){
 const d = new Date(Date.now() + offsetDays*86400000);
 return gregorianToJalali(d.getFullYear(), d.getMonth()+1, d.getDate());
 }
+const FA_DIGITS = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+function toAsciiDigits(v){ return String(v==null?'':v).replace(/[۰-۹]/g, function(d){ return String(FA_DIGITS.indexOf(d)); }); }
 function idleHours(lastReceiptAt){
 if(!lastReceiptAt) return null;
 const iso = lastReceiptAt.replace(' ','T') + 'Z';
@@ -90,6 +92,7 @@ return Math.max(0, Math.floor(diffMs/3600000));
 }
 async function load(date){
 const app = document.getElementById('app');
+currentDate = date;
 if(!token){ app.innerHTML = '<div class="empty">دسترسی نامعتبر است.</div>'; return; }
 app.innerHTML = '<div class="empty">در حال بارگذاری...</div>';
 try {
@@ -105,12 +108,15 @@ app.innerHTML = '<div class="empty">ارتباط برقرار نشد.</div>';
 }
 let selectedAccountId = null;
 let lastData = null;
+let currentDate = null;
 function render(data){
 lastData = data;
 const app = document.getElementById('app');
-const accounts = (data.accounts||[]).slice().sort(function(a,b){ return (a.progress_percent==null?101:a.progress_percent)-(b.progress_percent==null?101:b.progress_percent); });
-// data.accounts کل عمر حسابه (همیشه یکسان بین امروز/دیروز)؛ فقط data.receipts طبق تب فعلی
-// فیلتر شده -- پس مجموع/تعداد «همین روز» رو خودمون از روی receipts می‌سازیم، نه accounts.
+// data.accounts کل عمر حسابه‌ست؛ اینجا فقط حساب‌های متعلق به همین روز (valid_jalali) رو
+// نگه می‌داریم تا اتاق فرمان دقیقاً همون چیزی رو نشون بده که تو خود مالگردان برای این روز ثبت شده.
+const allAccounts = (data.accounts||[]);
+const accounts = allAccounts.filter(function(a){ return toAsciiDigits(a.valid_jalali)===currentDate; })
+  .sort(function(a,b){ return (a.progress_percent==null?101:a.progress_percent)-(b.progress_percent==null?101:b.progress_percent); });
 const todayConfirmedByAccount = {}, todayCountByAccount = {};
 (data.receipts||[]).forEach(function(r){
 if(r.status==='confirmed'){
@@ -118,17 +124,20 @@ todayConfirmedByAccount[r.account_id] = (todayConfirmedByAccount[r.account_id]||
 todayCountByAccount[r.account_id] = (todayCountByAccount[r.account_id]||0) + 1;
 }
 });
-const limited = accounts.filter(function(a){ return a.progress_percent!=null; });
+const limited = accounts.filter(function(a){ return Number(a.target_amount||0) > 0; });
 const totalTarget = limited.reduce(function(s,a){ return s+Number(a.target_amount||0); },0);
 const totalConfirmed = limited.reduce(function(s,a){ return s+Number(a.confirmed_total||0); },0);
 const overallPct = totalTarget>0 ? Math.min(100, Math.round(totalConfirmed*100/totalTarget)) : 0;
 let html = '<div class="hero"><div class="hero-top"><span class="hero-label">درصد تکمیل کل حساب‌های سقف‌دار</span><span class="hero-pct">' + overallPct + '%</span></div><div class="hero-bar"><div class="hero-bar-fill" style="width:' + overallPct + '%"></div></div></div>';
 if(!accounts.length){
-html += '<div class="empty">حسابی برای نمایش وجود ندارد.</div>';
+html += '<div class="empty">برای این روز حسابی ثبت نشده است.</div>';
 } else {
 html += '<div class="grid">';
 for(const a of accounts){
-const pct = a.progress_percent;
+// progress_percent فقط بعد از اولین فیش تأییدشده مقدار می‌گیره (null یعنی صفر، نه بی‌سقف)؛
+// معیار واقعیِ «سقف‌دار بودن» وجود target_amount>0 است، نه null/not-null بودن progress_percent.
+const hasTarget = Number(a.target_amount||0) > 0;
+const pct = hasTarget ? (a.progress_percent==null ? 0 : a.progress_percent) : null;
 const idle = idleHours(a.last_receipt_at);
 const isIdle = idle!=null && idle>=3;
 const route = (a.source_party_name ? esc(a.source_party_name) : '—') + ' ← ' + (a.destination_party_name ? esc(a.destination_party_name) : '—');
@@ -140,9 +149,10 @@ else if(idle!=null) html += '<span class="badge">' + idle + ' ساعت پیش</s
 html += '</div>';
 if(pct!=null){
 html += '<div class="progress"><div class="progress-bar" style="width:' + Math.min(100,pct) + '%"></div></div>';
-html += '<div class="card-stats"><span title="مجموع کل عمر این حساب">کل واریزی: <b>' + money(a.confirmed_total) + '</b></span><span>سقف: <b>' + money(a.target_amount) + '</b></span></div>';
+html += '<div class="card-stats"><span>واریزی: <b>' + money(a.confirmed_total) + '</b></span><span>سقف: <b>' + money(a.target_amount) + '</b></span></div>';
+if(a.remaining_amount!=null) html += '<div class="card-stats" style="margin-top:6px"><span>باقیمانده تا سقف: <b>' + money(a.remaining_amount) + '</b></span></div>';
 } else {
-html += '<div class="card-stats"><span title="مجموع کل عمر این حساب">کل واریزی: <b>' + money(a.confirmed_total) + '</b> ریال</span></div>';
+html += '<div class="card-stats"><span>واریزی: <b>' + money(a.confirmed_total) + '</b> ریال</span></div>';
 }
 html += '<div class="card-stats" style="margin-top:6px"><span>واریزی این روز: <b>' + money(todaySum) + '</b></span><span>' + todayCount + ' فیش این روز</span></div>';
 html += '</div>';
