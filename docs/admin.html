@@ -162,6 +162,7 @@ html += '<tr><td>' + esc(r.account_owner) + '</td><td>' + rroute + '</td><td>' +
 html += '</tbody></table>';
 }
 html += '<div class="updated">آخرین به‌روزرسانی: ' + new Date().toLocaleString('fa-IR') + '</div>';
+html += '<div class="updated" style="font-weight:600;color:var(--gold)">تهیه‌شده با مال‌گردان</div>';
 app.innerHTML = html;
 }
 document.getElementById('app').addEventListener('click', function(e){
