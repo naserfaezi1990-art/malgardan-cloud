@@ -140,21 +140,26 @@ const hasTarget = Number(a.target_amount||0) > 0;
 const pct = hasTarget ? (a.progress_percent==null ? 0 : a.progress_percent) : null;
 const idle = idleHours(a.last_receipt_at);
 const isIdle = idle!=null && idle>=3;
-const route = (a.source_party_name ? esc(a.source_party_name) : '—') + ' ← ' + (a.destination_party_name ? esc(a.destination_party_name) : '—');
-const todaySum = todayConfirmedByAccount[a.id]||0, todayCount = todayCountByAccount[a.id]||0;
+// طبق خواسته‌ی کاربر: تیترِ کارت باید بگه «با کی معامله کرده» -- یعنی طرف‌حساب مبدأ (کسی که
+// امیرحسین ازش دریافت می‌کنه)، نه صاحب‌حسابِ مقصد که رو خیلی از کارت‌ها یکسانه و فرقی نشون نمی‌ده.
+const counterpartyLabel = a.source_party_name ? esc(a.source_party_name) : '—';
+const receiptCount = todayCountByAccount[a.id]||0;
 const isSelected = selectedAccountId===a.id;
-html += '<div class="card ' + (isIdle?'idle':'') + (isSelected?' selected':'') + '" data-account-id="' + a.id + '" style="cursor:pointer" title="برای دیدن فقط فیش‌های این حساب کلیک کن"><div class="card-top"><div><div class="card-title">' + esc(a.owner_name) + '</div><div class="card-client">' + esc(a.client_name) + ' · ' + route + '</div></div>';
+html += '<div class="card ' + (isIdle?'idle':'') + (isSelected?' selected':'') + '" data-account-id="' + a.id + '" style="cursor:pointer" title="برای دیدن فقط فیش‌های این حساب کلیک کن">';
+html += '<div class="card-top"><div><div class="card-title">' + counterpartyLabel + '</div><div class="card-client">' + esc(a.client_name) + ' · → ' + (a.destination_party_name ? esc(a.destination_party_name) : '—') + '</div></div>';
+html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">';
 if(isIdle) html += '<span class="badge idle">' + idle + ' ساعت راکد</span>';
 else if(idle!=null) html += '<span class="badge">' + idle + ' ساعت پیش</span>';
-html += '</div>';
-if(pct!=null){
+html += '<span class="badge">' + receiptCount + ' فیش امروز</span>';
+html += '</div></div>';
+if(hasTarget){
 html += '<div class="progress"><div class="progress-bar" style="width:' + Math.min(100,pct) + '%"></div></div>';
-html += '<div class="card-stats"><span>واریزی: <b>' + money(a.confirmed_total) + '</b></span><span>سقف: <b>' + money(a.target_amount) + '</b></span></div>';
-if(a.remaining_amount!=null) html += '<div class="card-stats" style="margin-top:6px"><span>باقیمانده تا سقف: <b>' + money(a.remaining_amount) + '</b></span></div>';
-} else {
-html += '<div class="card-stats"><span>واریزی: <b>' + money(a.confirmed_total) + '</b> ریال</span></div>';
 }
-html += '<div class="card-stats" style="margin-top:6px"><span>واریزی این روز: <b>' + money(todaySum) + '</b></span><span>' + todayCount + ' فیش این روز</span></div>';
+html += '<div class="card-stats">';
+if(hasTarget) html += '<span>سقف حساب: <b>' + money(a.target_amount) + '</b></span>';
+html += '<span>واریزی: <b>' + money(a.confirmed_total) + '</b></span>';
+if(hasTarget && a.remaining_amount!=null) html += '<span>مانده: <b>' + money(a.remaining_amount) + '</b></span>';
+html += '</div>';
 html += '</div>';
 }
 html += '</div>';
