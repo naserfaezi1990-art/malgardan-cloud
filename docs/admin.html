@@ -18,9 +18,15 @@ h1 { font-size:20px; margin:0; font-weight:700; }
 .tabs button { background:none; border:none; color:var(--dim); padding:8px 16px; border-radius:8px; font-family:inherit; font-size:13px; cursor:pointer; }
 .tabs button.active { background:var(--gold); color:#1a1408; font-weight:600; }
 .hero { background:linear-gradient(135deg,var(--panel-2),var(--panel)); border:1px solid var(--line); border-radius:16px; padding:24px; margin-bottom:20px; }
-.hero-top { display:flex; justify-content:space-between; margin-bottom:12px; }
-.hero-label { color:var(--dim); font-size:13px; }
-.hero-pct { font-size:36px; font-weight:800; color:var(--gold); }
+.hero-top { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:12px; }
+.hero-label { color:var(--dim); font-size:13px; line-height:1.9; }
+.hero-label b { color:var(--ink); font-weight:700; }
+.hero-pct { font-size:36px; font-weight:800; color:var(--gold); line-height:1; }
+.hero-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:16px; padding-top:14px; border-top:1px solid var(--line); }
+.hero-stat { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.hero-stat span { color:var(--dim); font-size:11.5px; }
+.hero-stat b { font-size:15px; font-weight:700; direction:ltr; text-align:right; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+@media (max-width:560px) { .hero-stats { grid-template-columns:1fr; gap:8px; } .hero-stat { flex-direction:row; justify-content:space-between; align-items:baseline; } }
 .hero-bar { height:14px; background:#2b303c; border-radius:8px; overflow:hidden; }
 .hero-bar-fill { height:100%; background:linear-gradient(90deg,#d4af6a,#f0d28f); border-radius:8px; }
 .section-title { font-size:14px; color:var(--dim); margin:28px 0 12px; }
@@ -33,10 +39,17 @@ h1 { font-size:20px; margin:0; font-weight:700; }
 .card-client { font-size:11px; color:var(--dim); }
 .badge { font-size:10px; padding:2px 8px; border-radius:20px; background:#2b303c; color:var(--dim); white-space:nowrap; }
 .badge.idle { background:rgba(224,90,78,.15); color:var(--warn); }
-.progress { height:8px; background:#2b303c; border-radius:6px; overflow:hidden; margin:10px 0 8px; }
+.progress-row { display:flex; align-items:center; gap:10px; margin:10px 0 6px; }
+.progress { flex:1; height:8px; background:#2b303c; border-radius:6px; overflow:hidden; }
 .progress-bar { height:100%; background:var(--gold); border-radius:6px; }
-.card-stats { display:flex; justify-content:space-between; font-size:12px; color:var(--dim); }
-.card-stats b { color:var(--ink); }
+.progress-pct { font-size:12px; font-weight:700; color:var(--gold); min-width:34px; text-align:left; direction:ltr; }
+/* سقف/واریزی/مانده هر کدوم یه ردیفِ جدا با برچسب سمت راست و عدد سمت چپ -- عددهای ۱۲ رقمی کنار هم جا نمی‌شدن و به هم می‌چسبیدن */
+.card-stats { display:flex; flex-direction:column; font-size:12px; color:var(--dim); }
+.stat-row { display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:7px 0; border-top:1px solid var(--line); }
+.stat-row:first-child { border-top:none; }
+.stat-row span { white-space:nowrap; }
+.stat-row b { color:var(--ink); font-size:13.5px; font-weight:700; direction:ltr; font-variant-numeric:tabular-nums; }
+.stat-row.remain b { color:var(--gold); }
 .empty { text-align:center; color:var(--dim); padding:60px 0; }
 .updated { text-align:center; font-size:11px; color:var(--dim); margin-top:24px; }
 table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden; font-size:13px; }
@@ -90,17 +103,44 @@ const iso = lastReceiptAt.replace(' ','T') + 'Z';
 const diffMs = Date.now() - new Date(iso).getTime();
 return Math.max(0, Math.floor(diffMs/3600000));
 }
-async function load(date){
-const app = document.getElementById('app');
-currentDate = date;
-if(!token){ app.innerHTML = '<div class="empty">دسترسی نامعتبر است.</div>'; return; }
-app.innerHTML = '<div class="empty">در حال بارگذاری...</div>';
-try {
+function toPersianDigits(v){ return String(v==null?'':v).replace(/[0-9]/g, function(d){ return FA_DIGITS[Number(d)]; }); }
+// درصدِ تکمیلِ یه حساب: همیشه از خودِ واریزی/سقف حساب می‌شه (نه درصدِ ذخیره‌شده) تا نوار، عدد کارت و
+// عددِ بالای صفحه همیشه دقیقاً یکی باشن. حساب بی‌سقف درصد نداره (null).
+function pctOf(a){
+const t = Number(a.target_amount||0);
+if(!(t>0)) return null;
+return Math.min(100, Math.round(Number(a.confirmed_total||0)*100/t));
+}
+function remainOf(a){ return Math.max(0, Number(a.target_amount||0) - Number(a.confirmed_total||0)); }
+async function fetchAdmin(date){
 let url = API + '/admin?token=' + encodeURIComponent(token);
 if(date) url += '&date=' + encodeURIComponent(date);
 const res = await fetch(url);
 const data = await res.json();
-if(!res.ok){ app.innerHTML = '<div class="empty">' + esc(data.error||'خطا') + '</div>'; return; }
+return { ok: res.ok, data: data };
+}
+async function load(date){
+const app = document.getElementById('app');
+currentDate = date;
+selectedAccountId = null;
+if(!token){ app.innerHTML = '<div class="empty">دسترسی نامعتبر است.</div>'; return; }
+app.innerHTML = '<div class="empty">در حال بارگذاری...</div>';
+try {
+// فیش‌هایی که تاریخشون قدیم‌تر با رقم فارسی ذخیره شده («۱۴۰۵/۰۶/۲۸») با تاریخِ انگلیسی مطابقت نمی‌کنن و
+// سرور فقط برابریِ عینی چک می‌کنه؛ پس هر دو شکل رو می‌گیریم و با هم ادغام می‌کنیم تا هیچ فیشی جا نیفته.
+const main = await fetchAdmin(date);
+if(!main.ok){ app.innerHTML = '<div class="empty">' + esc(main.data.error||'خطا') + '</div>'; return; }
+const data = main.data;
+if(date){
+try {
+const legacy = await fetchAdmin(toPersianDigits(date));
+if(legacy.ok && Array.isArray(legacy.data.receipts)){
+const seen = {};
+(data.receipts||[]).forEach(function(r){ seen[r.sync_uuid||('id'+r.receipt_id)] = true; });
+legacy.data.receipts.forEach(function(r){ const k = r.sync_uuid||('id'+r.receipt_id); if(!seen[k]){ seen[k] = true; data.receipts.push(r); } });
+}
+} catch(e) { /* فقط یه پشتیبانِ اضافه بود؛ نبودنش مهم نیست */ }
+}
 render(data);
 } catch(e) {
 app.innerHTML = '<div class="empty">ارتباط برقرار نشد.</div>';
@@ -116,7 +156,7 @@ const app = document.getElementById('app');
 // نگه می‌داریم تا اتاق فرمان دقیقاً همون چیزی رو نشون بده که تو خود مالگردان برای این روز ثبت شده.
 const allAccounts = (data.accounts||[]);
 const accounts = allAccounts.filter(function(a){ return toAsciiDigits(a.valid_jalali)===currentDate; })
-  .sort(function(a,b){ return (a.progress_percent==null?101:a.progress_percent)-(b.progress_percent==null?101:b.progress_percent); });
+  .sort(function(a,b){ const pa = pctOf(a), pb = pctOf(b); return (pa==null?101:pa)-(pb==null?101:pb); });
 const todayConfirmedByAccount = {}, todayCountByAccount = {};
 (data.receipts||[]).forEach(function(r){
 if(r.status==='confirmed'){
@@ -125,10 +165,28 @@ todayCountByAccount[r.account_id] = (todayCountByAccount[r.account_id]||0) + 1;
 }
 });
 const limited = accounts.filter(function(a){ return Number(a.target_amount||0) > 0; });
+// وقتی روی یه کارت کلیک شده، بالای صفحه درصدِ همون حساب رو نشون می‌ده (نه درصدِ کلِ همه‌ی حساب‌ها)
+const selected = selectedAccountId ? accounts.find(function(a){ return a.id===selectedAccountId; }) : null;
+if(selectedAccountId && !selected) selectedAccountId = null;
+let heroLabel, heroPct, heroTarget, heroConfirmed, heroRemain;
+if(selected){
+const hasT = Number(selected.target_amount||0) > 0;
+heroLabel = 'درصد تکمیل حساب <b>' + esc(selected.source_party_name||'—') + ' ← ' + esc(selected.destination_party_name||'—') + '</b>';
+heroPct = hasT ? pctOf(selected) : null;
+heroTarget = hasT ? money(selected.target_amount) : 'ندارد';
+heroConfirmed = money(selected.confirmed_total);
+heroRemain = hasT ? money(remainOf(selected)) : '—';
+} else {
 const totalTarget = limited.reduce(function(s,a){ return s+Number(a.target_amount||0); },0);
 const totalConfirmed = limited.reduce(function(s,a){ return s+Number(a.confirmed_total||0); },0);
-const overallPct = totalTarget>0 ? Math.min(100, Math.round(totalConfirmed*100/totalTarget)) : 0;
-let html = '<div class="hero"><div class="hero-top"><span class="hero-label">درصد تکمیل کل حساب‌های سقف‌دار</span><span class="hero-pct">' + overallPct + '%</span></div><div class="hero-bar"><div class="hero-bar-fill" style="width:' + overallPct + '%"></div></div></div>';
+const totalRemain = limited.reduce(function(s,a){ return s+remainOf(a); },0);
+heroLabel = 'درصد تکمیل کل حساب‌های سقف‌دار<br><span style="font-size:11.5px">برای دیدنِ درصدِ یک حساب، روی کارتش کلیک کن</span>';
+heroPct = totalTarget>0 ? Math.min(100, Math.round(totalConfirmed*100/totalTarget)) : 0;
+heroTarget = money(totalTarget); heroConfirmed = money(totalConfirmed); heroRemain = money(totalRemain);
+}
+const heroBarWidth = heroPct==null ? 0 : heroPct;
+let html = '<div class="hero"><div class="hero-top"><span class="hero-label">' + heroLabel + '</span><span class="hero-pct">' + (heroPct==null ? '—' : heroPct + '%') + '</span></div><div class="hero-bar"><div class="hero-bar-fill" style="width:' + heroBarWidth + '%"></div></div>';
+html += '<div class="hero-stats"><div class="hero-stat"><span>سقف حساب</span><b>' + heroTarget + '</b></div><div class="hero-stat"><span>واریزی تا این لحظه</span><b>' + heroConfirmed + '</b></div><div class="hero-stat"><span>مانده تا سقف</span><b>' + heroRemain + '</b></div></div></div>';
 if(!accounts.length){
 html += '<div class="empty">برای این روز حسابی ثبت نشده است.</div>';
 } else {
@@ -137,7 +195,7 @@ for(const a of accounts){
 // progress_percent فقط بعد از اولین فیش تأییدشده مقدار می‌گیره (null یعنی صفر، نه بی‌سقف)؛
 // معیار واقعیِ «سقف‌دار بودن» وجود target_amount>0 است، نه null/not-null بودن progress_percent.
 const hasTarget = Number(a.target_amount||0) > 0;
-const pct = hasTarget ? (a.progress_percent==null ? 0 : a.progress_percent) : null;
+const pct = hasTarget ? pctOf(a) : null;
 const idle = idleHours(a.last_receipt_at);
 const isIdle = idle!=null && idle>=3;
 // طبق خواسته‌ی کاربر: تیترِ کارت باید بگه «با کی معامله کرده» -- یعنی طرف‌حساب مبدأ (کسی که
@@ -153,12 +211,12 @@ else if(idle!=null) html += '<span class="badge">' + idle + ' ساعت پیش</s
 html += '<span class="badge">' + receiptCount + ' فیش امروز</span>';
 html += '</div></div>';
 if(hasTarget){
-html += '<div class="progress"><div class="progress-bar" style="width:' + Math.min(100,pct) + '%"></div></div>';
+html += '<div class="progress-row"><div class="progress"><div class="progress-bar" style="width:' + pct + '%"></div></div><span class="progress-pct">' + pct + '%</span></div>';
 }
 html += '<div class="card-stats">';
-if(hasTarget) html += '<span>سقف حساب: <b>' + money(a.target_amount) + '</b></span>';
-html += '<span>واریزی: <b>' + money(a.confirmed_total) + '</b></span>';
-if(hasTarget && a.remaining_amount!=null) html += '<span>مانده: <b>' + money(a.remaining_amount) + '</b></span>';
+if(hasTarget) html += '<div class="stat-row"><span>سقف حساب</span><b>' + money(a.target_amount) + '</b></div>';
+html += '<div class="stat-row"><span>واریزی تا این لحظه</span><b>' + money(a.confirmed_total) + '</b></div>';
+if(hasTarget) html += '<div class="stat-row remain"><span>مانده تا سقف</span><b>' + money(remainOf(a)) + '</b></div>';
 html += '</div>';
 html += '</div>';
 }
