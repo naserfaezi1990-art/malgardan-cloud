@@ -5,13 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="مال‌گردان">
-<meta property="og:title" content="مال‌گردان">
+<meta property="og:site_name" content="فیش‌بان">
+<meta property="og:title" content="فیش‌بان">
 <meta property="og:description" content="مدیریت هوشمند واریزی و تسویه">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="مال‌گردان">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="فیش‌بان">
 <meta name="twitter:description" content="مدیریت هوشمند واریزی و تسویه">
 <meta name="theme-color" content="#0F2A24">
+<meta property="og:image" content="https://naserfaezi1990-art.github.io/malgardan-cloud/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://naserfaezi1990-art.github.io/malgardan-cloud/og.png">
+<link rel="icon" type="image/png" href="favicon.png">
 <title>گزارش تسویه</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -138,7 +143,7 @@ for(const a of otherAccounts){ html += accountCard(a, data, true); }
 }
 }
 html += '<div class="updated">آخرین به‌روزرسانی: ' + new Date().toLocaleString('fa-IR') + '</div>';
-html += '<div class="updated" style="font-weight:600;color:var(--brass)">تهیه‌شده با مال‌گردان</div>';
+html += '<div class="updated" style="font-weight:600;color:var(--brass)">تهیه‌شده با فیش‌بان</div>';
 app.innerHTML = html;
 const toggle = document.getElementById('toggleHistory');
 if(toggle) toggle.onclick = function(){ showHistory = !showHistory; render(lastData); };

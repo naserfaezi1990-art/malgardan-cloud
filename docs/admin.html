@@ -5,13 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="مال‌گردان">
-<meta property="og:title" content="مال‌گردان">
+<meta property="og:site_name" content="فیش‌بان">
+<meta property="og:title" content="فیش‌بان">
 <meta property="og:description" content="مدیریت هوشمند واریزی و تسویه">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="مال‌گردان">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="فیش‌بان">
 <meta name="twitter:description" content="مدیریت هوشمند واریزی و تسویه">
 <meta name="theme-color" content="#0F2A24">
+<meta property="og:image" content="https://naserfaezi1990-art.github.io/malgardan-cloud/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://naserfaezi1990-art.github.io/malgardan-cloud/og.png">
+<link rel="icon" type="image/png" href="favicon.png">
 <title>اتاق فرمان</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -77,7 +82,7 @@ tr:last-child td { border-bottom:none; }
 <body>
 <div class="wrap">
 <div class="top">
-<h1>اتاق فرمان مالگردان</h1>
+<h1>اتاق فرمان فیش‌بان</h1>
 <div class="tabs">
 <button id="btnToday" class="active">امروز</button>
 <button id="btnYesterday">دیروز</button>
@@ -168,7 +173,7 @@ function render(data){
 lastData = data;
 const app = document.getElementById('app');
 // data.accounts کل عمر حسابه‌ست؛ اینجا فقط حساب‌های متعلق به همین روز (valid_jalali) رو
-// نگه می‌داریم تا اتاق فرمان دقیقاً همون چیزی رو نشون بده که تو خود مالگردان برای این روز ثبت شده.
+// نگه می‌داریم تا اتاق فرمان دقیقاً همون چیزی رو نشون بده که تو خود فیش‌بان برای این روز ثبت شده.
 const allAccounts = (data.accounts||[]);
 const accounts = allAccounts.filter(function(a){ return toAsciiDigits(a.valid_jalali)===currentDate; })
   .sort(function(a,b){ const pa = pctOf(a), pb = pctOf(b); return (pa==null?101:pa)-(pb==null?101:pb); });
@@ -255,7 +260,7 @@ html += '<tr><td>' + esc(r.account_owner) + '</td><td>' + rroute + '</td><td>' +
 html += '</tbody></table>';
 }
 html += '<div class="updated">آخرین به‌روزرسانی: ' + new Date().toLocaleString('fa-IR') + '</div>';
-html += '<div class="updated" style="font-weight:600;color:var(--gold)">تهیه‌شده با مال‌گردان</div>';
+html += '<div class="updated" style="font-weight:600;color:var(--gold)">تهیه‌شده با فیش‌بان</div>';
 app.innerHTML = html;
 }
 document.getElementById('app').addEventListener('click', function(e){
