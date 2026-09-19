@@ -50,6 +50,10 @@ h1 { font-size:20px; margin:0; font-weight:700; }
 .stat-row span { white-space:nowrap; }
 .stat-row b { color:var(--ink); font-size:13.5px; font-weight:700; direction:ltr; font-variant-numeric:tabular-nums; }
 .stat-row.remain b { color:var(--gold); }
+.stat-row.over b, .stat-row.over span { color:var(--warn); }
+.progress-bar.over { background:var(--warn); }
+.progress-pct.over { color:var(--warn); }
+.hero-stat.over span, .hero-stat.over b { color:var(--warn); }
 .empty { text-align:center; color:var(--dim); padding:60px 0; }
 .updated { text-align:center; font-size:11px; color:var(--dim); margin-top:24px; }
 table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden; font-size:13px; }
@@ -112,6 +116,8 @@ if(!(t>0)) return null;
 return Math.min(100, Math.round(Number(a.confirmed_total||0)*100/t));
 }
 function remainOf(a){ return Math.max(0, Number(a.target_amount||0) - Number(a.confirmed_total||0)); }
+// واریزی از سقف رد شده؟ «مانده: ۰» غلط بود؛ مقدار اضافه‌واریز نشون داده می‌شه (فقط برای حساب سقف‌دار)
+function overOf(a){ return Number(a.target_amount||0)>0 ? Math.max(0, Number(a.confirmed_total||0) - Number(a.target_amount||0)) : 0; }
 async function fetchAdmin(date){
 let url = API + '/admin?token=' + encodeURIComponent(token);
 if(date) url += '&date=' + encodeURIComponent(date);
@@ -168,14 +174,16 @@ const limited = accounts.filter(function(a){ return Number(a.target_amount||0) >
 // وقتی روی یه کارت کلیک شده، بالای صفحه درصدِ همون حساب رو نشون می‌ده (نه درصدِ کلِ همه‌ی حساب‌ها)
 const selected = selectedAccountId ? accounts.find(function(a){ return a.id===selectedAccountId; }) : null;
 if(selectedAccountId && !selected) selectedAccountId = null;
-let heroLabel, heroPct, heroTarget, heroConfirmed, heroRemain;
+let heroLabel, heroPct, heroTarget, heroConfirmed, heroRemain, heroRemainLabel = 'مانده تا سقف', heroOver = false;
 if(selected){
 const hasT = Number(selected.target_amount||0) > 0;
 heroLabel = 'درصد تکمیل حساب <b>' + esc(selected.source_party_name||'—') + ' ← ' + esc(selected.destination_party_name||'—') + '</b>';
 heroPct = hasT ? pctOf(selected) : null;
 heroTarget = hasT ? money(selected.target_amount) : 'ندارد';
 heroConfirmed = money(selected.confirmed_total);
-heroRemain = hasT ? money(remainOf(selected)) : '—';
+heroOver = overOf(selected) > 0;
+heroRemainLabel = heroOver ? 'اضافه‌واریز' : 'مانده تا سقف';
+heroRemain = hasT ? money(heroOver ? overOf(selected) : remainOf(selected)) : '—';
 } else {
 const totalTarget = limited.reduce(function(s,a){ return s+Number(a.target_amount||0); },0);
 const totalConfirmed = limited.reduce(function(s,a){ return s+Number(a.confirmed_total||0); },0);
@@ -186,7 +194,7 @@ heroTarget = money(totalTarget); heroConfirmed = money(totalConfirmed); heroRema
 }
 const heroBarWidth = heroPct==null ? 0 : heroPct;
 let html = '<div class="hero"><div class="hero-top"><span class="hero-label">' + heroLabel + '</span><span class="hero-pct">' + (heroPct==null ? '—' : heroPct + '%') + '</span></div><div class="hero-bar"><div class="hero-bar-fill" style="width:' + heroBarWidth + '%"></div></div>';
-html += '<div class="hero-stats"><div class="hero-stat"><span>سقف حساب</span><b>' + heroTarget + '</b></div><div class="hero-stat"><span>واریزی تا این لحظه</span><b>' + heroConfirmed + '</b></div><div class="hero-stat"><span>مانده تا سقف</span><b>' + heroRemain + '</b></div></div></div>';
+html += '<div class="hero-stats"><div class="hero-stat"><span>سقف حساب</span><b>' + heroTarget + '</b></div><div class="hero-stat"><span>واریزی تا این لحظه</span><b>' + heroConfirmed + '</b></div><div class="hero-stat' + (heroOver?' over':'') + '"><span>' + heroRemainLabel + '</span><b>' + heroRemain + '</b></div></div></div>';
 if(!accounts.length){
 html += '<div class="empty">برای این روز حسابی ثبت نشده است.</div>';
 } else {
@@ -211,12 +219,15 @@ else if(idle!=null) html += '<span class="badge">' + idle + ' ساعت پیش</s
 html += '<span class="badge">' + receiptCount + ' فیش امروز</span>';
 html += '</div></div>';
 if(hasTarget){
-html += '<div class="progress-row"><div class="progress"><div class="progress-bar" style="width:' + pct + '%"></div></div><span class="progress-pct">' + pct + '%</span></div>';
+html += '<div class="progress-row"><div class="progress"><div class="progress-bar' + (overOf(a)>0?' over':'') + '" style="width:' + pct + '%"></div></div><span class="progress-pct' + (overOf(a)>0?' over':'') + '">' + pct + '%</span></div>';
 }
 html += '<div class="card-stats">';
 if(hasTarget) html += '<div class="stat-row"><span>سقف حساب</span><b>' + money(a.target_amount) + '</b></div>';
 html += '<div class="stat-row"><span>واریزی تا این لحظه</span><b>' + money(a.confirmed_total) + '</b></div>';
-if(hasTarget) html += '<div class="stat-row remain"><span>مانده تا سقف</span><b>' + money(remainOf(a)) + '</b></div>';
+if(hasTarget){
+if(overOf(a)>0) html += '<div class="stat-row over"><span>اضافه‌واریز</span><b>' + money(overOf(a)) + '</b></div>';
+else html += '<div class="stat-row remain"><span>مانده تا سقف</span><b>' + money(remainOf(a)) + '</b></div>';
+}
 html += '</div>';
 html += '</div>';
 }
