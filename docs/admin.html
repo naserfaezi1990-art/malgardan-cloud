@@ -140,6 +140,22 @@ tr:last-child td { border-bottom:none; }
 .snums .sof { color:var(--dim); direction:ltr; }
 .snums .srem { color:var(--warn); font-weight:700; margin-inline-start:auto; direction:rtl; }
 .srow.full .srem { color:var(--ok); }
+/* ---- گزارش پرداخت‌کننده‌ها ---- */
+.rpt { display:flex; flex-direction:column; gap:12px; }
+.rrow { display:flex; flex-direction:column; gap:8px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 16px; }
+.rrow-top { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.rname { font-size:16px; font-weight:800; }
+.rrem { font-size:13px; color:var(--dim); } .rrem b { color:var(--warn); font-size:17px; font-weight:800; font-variant-numeric:tabular-nums; direction:ltr; display:inline-block; }
+.rrem.ok { color:var(--ok); font-weight:700; }
+.rmeta { display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 16px; font-size:12.5px; font-variant-numeric:tabular-nums; }
+.rmeta .sp { color:var(--ok); font-weight:700; } .rmeta .sof { color:var(--dim); } .rmeta .rpct { color:var(--gold); font-weight:800; margin-inline-start:auto; direction:ltr; } .rmeta .rextra { color:var(--warn); font-weight:700; }
+.rrow.full .rpct { color:var(--ok); }
+.rparts { display:flex; flex-wrap:wrap; gap:6px; }
+.rpart { font-size:12px; padding:4px 11px; border-radius:99px; background:var(--panel-2); border:1px solid var(--line); font-variant-numeric:tabular-nums; }
+.rpart.gap { color:var(--warn); } .rpart.done { color:var(--ok); } .rpart.over { color:var(--warn); }
+.rtotal { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 10px; padding:16px; border:1px solid var(--warn); border-radius:14px; background:rgba(224,90,78,.07); }
+.rtotal span { color:var(--dim); font-size:13px; } .rtotal b { font-size:22px; font-weight:800; color:var(--warn); font-variant-numeric:tabular-nums; direction:ltr; }
+.rtotal em { font-style:normal; color:var(--dim); font-size:12px; } .rtotal .rtotal-sub { margin-inline-start:auto; font-size:12px; }
 </style>
 </head>
 <body>
@@ -298,6 +314,41 @@ function creditorCard(c, countByDst, selC, selS){
 }
 let lastData = null;
 let currentDate = null;
+function buildSourceReport(creditors){
+ const map = {};
+ creditors.forEach(function(c){
+  c.list.forEach(function(s){
+   const r = map[s.key] || (map[s.key] = { key:s.key, name:s.name, target:0, paid:0, unfilled:0, extra:0, parts:[] });
+   r.target += s.target; r.paid += s.paid;
+   r.unfilled += Math.max(0, s.target - s.paid); r.extra += Math.max(0, s.paid - s.target);
+   r.parts.push({ creditor:c.name, target:s.target, paid:s.paid });
+  });
+ });
+ return Object.keys(map).map(function(k){ return map[k]; }).sort(function(a,b){ return b.unfilled - a.unfilled; });
+}
+function sourceReportHtml(creditors){
+ const rows = buildSourceReport(creditors);
+ if(!rows.length) return '';
+ let totUnfilled = 0, totTarget = 0, totPaid = 0;
+ let h = '<div class="section-title">گزارش پرداخت‌کننده‌ها — امروز چقدر پر نکرده‌اند</div><div class="rpt">';
+ rows.forEach(function(r){
+  totUnfilled += r.unfilled; totTarget += r.target; totPaid += r.paid;
+  const pct = pctFrom(r.paid, r.target);
+  const cls = r.unfilled===0 ? 'full' : '';
+  h += '<div class="rrow ' + cls + '"><div class="rrow-top"><span class="rname">' + esc(r.name) + '</span>';
+  h += r.unfilled>0 ? '<span class="rrem">پر نکرده: <b>' + money(r.unfilled) + '</b> ریال</span>' : '<span class="rrem ok">همه‌ی سهم‌ها کامل است</span>';
+  h += '</div><div class="sbar"><i style="width:' + pct + '%"></i></div>';
+  h += '<div class="rmeta"><span class="sp">پر کرده: ' + money(r.paid) + '</span><span class="sof">از کل: ' + money(r.target) + '</span><span class="rpct">' + pct + '%</span>' + (r.extra>0 ? '<span class="rextra">اضافه‌واریز: ' + money(r.extra) + '</span>' : '') + '</div>';
+  h += '<div class="rparts">';
+  r.parts.forEach(function(x){
+   const gap = x.target - x.paid;
+   h += '<span class="rpart ' + (gap>0 ? 'gap' : (gap<0 ? 'over' : 'done')) + '">' + esc(x.creditor) + ' · ' + (gap>0 ? 'مانده ' + money(gap) : (gap<0 ? 'اضافه ' + money(-gap) : 'کامل')) + '</span>';
+  });
+  h += '</div></div>';
+ });
+ h += '<div class="rtotal"><span>مجموعِ پر نکرده‌ی همه</span><b>' + money(totUnfilled) + '</b><em>ریال</em><span class="rtotal-sub">پر شده ' + money(totPaid) + ' از ' + money(totTarget) + '</span></div></div>';
+ return h;
+}
 function render(data){
 lastData = data;
 const app = document.getElementById('app');
@@ -317,7 +368,7 @@ const limited = accounts.filter(function(a){ return Number(a.target_amount||0) >
 // وقتی روی یه کارت کلیک شده، بالای صفحه درصدِ همون حساب رو نشون می‌ده (نه درصدِ کلِ همه‌ی حساب‌ها)
 const selected = selectedAccountId ? accounts.find(function(a){ return a.id===selectedAccountId; }) : null;
 if(selectedAccountId && !selected) selectedAccountId = null;
-const creditors = viewMode==='creditor' ? buildCreditors(accounts) : [];
+const creditors = buildCreditors(accounts);
 let selC = null, selS = null;
 if(viewMode==='creditor' && selCreditor){ selC = creditors.find(function(c){ return c.key===selCreditor; }) || null; if(selC && selSource) selS = selC.sources[selSource] || null; if(!selC){ selCreditor = null; selSource = null; } }
 const countByDst = {};
@@ -387,21 +438,7 @@ html += '</div></div>';
 }
 html += '</div>';
 }
-let receipts = data.receipts||[];
-if(selC){ receipts = receipts.filter(function(r){ return rkey(r,'dst')===selC.key && (!selS || rkey(r,'src')===selS.key); }); }
-else if(selectedAccountId){ receipts = receipts.filter(function(r){ return r.account_id===selectedAccountId; }); }
-const hasFilter = !!(selC || selectedAccountId);
-html += '<div class="section-title">فیش‌های این روز (' + receipts.length + ' مورد)' + (hasFilter?' <a href="#" id="clearAccountFilter" style="color:var(--gold);font-size:12px;margin-right:10px">نمایش همه</a>':'') + '</div>';
-if(!receipts.length){
-html += '<div class="empty">فیشی برای این روز ثبت نشده است.</div>';
-} else {
-html += '<table><thead><tr><th>حساب</th><th>مسیر</th><th>واریزکننده</th><th>مبلغ</th><th>کد پیگیری</th><th>وضعیت</th></tr></thead><tbody>';
-for(const r of receipts){
-const rroute = (r.source_party_name ? esc(r.source_party_name) : '—') + ' ← ' + (r.destination_party_name ? esc(r.destination_party_name) : '—');
-html += '<tr><td>' + esc(r.account_owner) + '</td><td>' + rroute + '</td><td>' + esc(r.payer_name||'—') + '</td><td>' + money(r.amount) + '</td><td>' + esc(r.tracking_code||'—') + '</td><td><span class="status ' + r.status + '">' + (r.status==='confirmed'?'تأییدشده':'برگشتی') + '</span></td></tr>';
-}
-html += '</tbody></table>';
-}
+html += sourceReportHtml(creditors);
 html += '<div class="updated">آخرین به‌روزرسانی: ' + new Date().toLocaleString('fa-IR') + '</div>';
 html += '<div class="updated" style="font-weight:600;color:var(--gold)">تهیه‌شده با فیش‌بان</div>';
 app.innerHTML = html;
