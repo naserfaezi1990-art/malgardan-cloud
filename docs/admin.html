@@ -116,6 +116,30 @@ tr:last-child td { border-bottom:none; }
 .ameta { display:flex; flex-wrap:wrap; gap:6px; }
 .ameta .badge { font-size:11px; padding:3px 10px; }
 .tot { color:var(--dim); font-size:12px; }
+/* ---- نمای بستانکار ---- */
+.viewbar { display:flex; justify-content:flex-start; margin:0 0 14px; }
+.seg { display:inline-flex; gap:4px; background:var(--panel); border:1px solid var(--line); padding:4px; border-radius:12px; }
+.seg button { background:none; border:none; color:var(--dim); padding:8px 18px; border-radius:9px; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; }
+.seg button.on { background:var(--gold); color:#1a1408; }
+.cgrid { grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); align-items:start; }
+.cname { font-size:19px; font-weight:800; color:var(--ink); }
+.sources { display:flex; flex-direction:column; gap:8px; padding-top:4px; border-top:1px dashed var(--line); }
+.sources-title { font-size:11.5px; color:var(--dim); font-weight:700; margin-top:8px; }
+.srow { display:flex; flex-direction:column; gap:5px; padding:9px 11px; background:var(--panel-2); border:1px solid var(--line); border-radius:11px; cursor:pointer; transition:border-color .12s ease; }
+.srow:hover { border-color:#3a4050; }
+.srow.active { border-color:var(--gold); box-shadow:0 0 0 1px var(--gold); }
+.srow-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.sname { font-size:13.5px; font-weight:700; }
+.spct { font-size:12px; font-weight:800; color:var(--gold); direction:ltr; }
+.sbar { height:6px; background:#2b303c; border-radius:6px; overflow:hidden; }
+.sbar i { display:block; height:100%; background:var(--gold); border-radius:6px; }
+.srow.full .sbar i { background:var(--ok); } .srow.full .spct { color:var(--ok); }
+.srow.over .sbar i { background:var(--warn); } .srow.over .spct { color:var(--warn); }
+.snums { display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; font-size:12px; font-variant-numeric:tabular-nums; }
+.snums .sp { color:var(--ok); font-weight:800; direction:ltr; }
+.snums .sof { color:var(--dim); direction:ltr; }
+.snums .srem { color:var(--warn); font-weight:700; margin-inline-start:auto; direction:rtl; }
+.srow.full .srem { color:var(--ok); }
 </style>
 </head>
 <body>
@@ -181,7 +205,7 @@ return { ok: res.ok, data: data };
 async function load(date){
 const app = document.getElementById('app');
 currentDate = date;
-selectedAccountId = null;
+selectedAccountId = null; selCreditor = null; selSource = null;
 if(!token){ app.innerHTML = '<div class="empty">دسترسی نامعتبر است.</div>'; return; }
 app.innerHTML = '<div class="empty">در حال بارگذاری...</div>';
 try {
@@ -206,6 +230,72 @@ app.innerHTML = '<div class="empty">ارتباط برقرار نشد.</div>';
 }
 }
 let selectedAccountId = null;
+let selCreditor = null, selSource = null;
+let viewMode = 'creditor';
+try { const v = localStorage.getItem('adminView'); if(v==='account' || v==='creditor') viewMode = v; } catch(e) {}
+function partyKey(id, name){ return String(id!=null && id!=='' ? id : (name||'—')); }
+// «بستانکار» = طرف‌حسابِ مقصد (کسی که از ما پول می‌خواهد). هر بستانکار سقفِ کلش جمعِ سقفِ حساب‌هایی است که مقصدشان اوست و
+// هر مبدأ (کنز، تختچین، ...) سهمِ خودش را دارد؛ واریزی‌ها از کلِ مطالبه کم می‌شود و «مانده» همان مانده‌ی بستانکار است.
+function buildCreditors(accounts){
+ const map = {};
+ accounts.forEach(function(a){
+  const has = Number(a.target_amount||0) > 0;
+  if(!has) return;
+  const dk = partyKey(a.destination_party_id, a.destination_party_name);
+  const c = map[dk] || (map[dk] = { key:dk, name:a.destination_party_name||'—', target:0, paid:0, sources:{}, lastAt:null, accounts:0 });
+  const sk = partyKey(a.source_party_id, a.source_party_name);
+  const s = c.sources[sk] || (c.sources[sk] = { key:sk, name:a.source_party_name||'هنگام ثبت فیش', target:0, paid:0 });
+  const t = Number(a.target_amount||0), f = Number(a.confirmed_total||0);
+  c.target += t; c.paid += f; s.target += t; s.paid += f; c.accounts++;
+  if(a.last_receipt_at && (!c.lastAt || a.last_receipt_at > c.lastAt)) c.lastAt = a.last_receipt_at;
+ });
+ return Object.keys(map).map(function(k){
+  const c = map[k];
+  c.list = Object.keys(c.sources).map(function(x){ return c.sources[x]; }).sort(function(a,b){ return b.target - a.target; });
+  return c;
+ }).sort(function(a,b){ return pctFrom(a.paid,a.target) - pctFrom(b.paid,b.target); });
+}
+function pctFrom(paid, target){ return target>0 ? Math.min(100, Math.round(Number(paid)*100/Number(target))) : 0; }
+function rkey(r, side){ return side==='dst' ? partyKey(r.destination_party_id, r.destination_party_name) : partyKey(r.source_party_id, r.source_party_name); }
+const RING_C = 169.65;
+function ringSvg(pct){
+ const off = (RING_C*(1-Math.min(100,pct)/100)).toFixed(2);
+ return '<div class="ring"><svg viewBox="0 0 64 64" width="72" height="72"><circle class="track" cx="32" cy="32" r="27"/><circle class="bar" cx="32" cy="32" r="27" stroke-dasharray="' + RING_C + '" stroke-dashoffset="' + off + '" transform="rotate(-90 32 32)"/></svg><b>' + pct + '%</b></div>';
+}
+function creditorCard(c, countByDst, selC, selS){
+ const pct = pctFrom(c.paid, c.target);
+ const over = c.paid > c.target;
+ const remain = Math.max(0, c.target - c.paid);
+ const tone = over ? 'over' : (remain===0 ? 'full' : 'warn');
+ const stateText = over ? 'اضافه‌واریز' : (remain===0 ? 'تکمیل' : 'فعال');
+ const heroLabel = over ? 'اضافه‌واریز' : 'مانده';
+ const heroVal = over ? c.paid - c.target : remain;
+ const heroCls = over ? 'over' : (remain===0 ? 'done' : 'remain');
+ const idle = idleHours(c.lastAt);
+ const isSel = selC && selC.key===c.key && !selS;
+ let h = '<div class="acard ccard t-' + tone + (isSel?' selected':'') + '" data-creditor="' + esc(c.key) + '" title="برای دیدن فقط فیش‌های این بستانکار کلیک کن">';
+ h += '<div class="acard-top"><div class="route"><span class="cname">' + esc(c.name) + '</span></div><span class="pill">' + stateText + '</span></div>';
+ 
+ h += '<div class="amain">' + ringSvg(pct) + '<div class="ahero"><small>' + heroLabel + '</small><div class="aval ' + heroCls + '"><b>' + money(heroVal) + '</b><em>ریال</em></div><span class="atoman">' + money(Math.floor(heroVal/10)) + ' تومان</span></div></div>';
+ h += '<div class="afacts"><div><small>کل مطالبه (سقف)</small><b>' + money(c.target) + '</b><span>' + money(Math.floor(c.target/10)) + ' تومان</span></div>';
+ h += '<div class="ok"><small>پرداخت‌شده تا الان</small><b>' + money(c.paid) + '</b><span>' + money(Math.floor(c.paid/10)) + ' تومان</span></div></div>';
+ h += '<div class="sources"><div class="sources-title">پرداخت از</div>';
+ c.list.forEach(function(s){
+  const sp = pctFrom(s.paid, s.target);
+  const sOver = s.paid > s.target, sRemain = Math.max(0, s.target - s.paid);
+  const cls = sOver ? 'over' : (sRemain===0 ? 'full' : '');
+  const active = selS && selC && selC.key===c.key && selS.key===s.key;
+  h += '<div class="srow ' + cls + (active?' active':'') + '" data-creditor="' + esc(c.key) + '" data-src="' + esc(s.key) + '" title="فقط فیش‌های ' + esc(s.name) + '">';
+  h += '<div class="srow-top"><span class="sname">' + esc(s.name) + '</span><span class="spct">' + sp + '%</span></div>';
+  h += '<div class="sbar"><i style="width:' + sp + '%"></i></div>';
+  h += '<div class="snums"><span class="sp">' + money(s.paid) + '</span><span class="sof">از ' + money(s.target) + '</span><span class="srem">' + (sOver ? 'اضافه ' + money(s.paid - s.target) : (sRemain===0 ? 'کامل' : 'مانده ' + money(sRemain))) + '</span></div></div>';
+ });
+ h += '</div>';
+ h += '<div class="ameta"><span class="badge">' + (countByDst[c.key]||0) + ' فیش امروز</span>';
+ if(idle!=null){ h += idle>=3 ? '<span class="badge idle">' + idle + ' ساعت راکد</span>' : '<span class="badge">' + idle + ' ساعت پیش</span>'; }
+ h += '</div></div>';
+ return h;
+}
 let lastData = null;
 let currentDate = null;
 function render(data){
@@ -227,8 +317,18 @@ const limited = accounts.filter(function(a){ return Number(a.target_amount||0) >
 // وقتی روی یه کارت کلیک شده، بالای صفحه درصدِ همون حساب رو نشون می‌ده (نه درصدِ کلِ همه‌ی حساب‌ها)
 const selected = selectedAccountId ? accounts.find(function(a){ return a.id===selectedAccountId; }) : null;
 if(selectedAccountId && !selected) selectedAccountId = null;
+const creditors = viewMode==='creditor' ? buildCreditors(accounts) : [];
+let selC = null, selS = null;
+if(viewMode==='creditor' && selCreditor){ selC = creditors.find(function(c){ return c.key===selCreditor; }) || null; if(selC && selSource) selS = selC.sources[selSource] || null; if(!selC){ selCreditor = null; selSource = null; } }
+const countByDst = {};
+(data.receipts||[]).forEach(function(r){ if(r.status==='confirmed'){ const k = rkey(r,'dst'); countByDst[k] = (countByDst[k]||0)+1; } });
 let heroLabel, heroPct, heroTarget, heroConfirmed, heroRemain, heroRemainLabel = 'مانده تا سقف', heroOver = false;
-if(selected){
+if(selC){
+const tgt = selS ? selS.target : selC.target, cf = selS ? selS.paid : selC.paid;
+heroLabel = 'درصد تکمیل بستانکار <b>' + esc(selC.name) + '</b>' + (selS ? ' — پرداخت از <b>' + esc(selS.name) + '</b>' : '');
+heroPct = pctFrom(cf, tgt); heroTarget = money(tgt); heroConfirmed = money(cf);
+heroOver = cf > tgt; heroRemainLabel = heroOver ? 'اضافه‌واریز' : 'مانده'; heroRemain = money(heroOver ? cf - tgt : tgt - cf);
+} else if(selected){
 const hasT = Number(selected.target_amount||0) > 0;
 heroLabel = 'درصد تکمیل حساب <b>' + esc(selected.source_party_name||'—') + ' ← ' + esc(selected.destination_party_name||'—') + '</b>';
 heroPct = hasT ? pctOf(selected) : null;
@@ -241,15 +341,18 @@ heroRemain = hasT ? money(heroOver ? overOf(selected) : remainOf(selected)) : '�
 const totalTarget = limited.reduce(function(s,a){ return s+Number(a.target_amount||0); },0);
 const totalConfirmed = limited.reduce(function(s,a){ return s+Number(a.confirmed_total||0); },0);
 const totalRemain = limited.reduce(function(s,a){ return s+remainOf(a); },0);
-heroLabel = 'درصد تکمیل کل حساب‌های سقف‌دار<br><span style="font-size:11.5px">برای دیدنِ درصدِ یک حساب، روی کارتش کلیک کن</span>';
+heroLabel = 'درصد تکمیل کل حساب‌های سقف‌دار<br><span style="font-size:11.5px">برای دیدنِ درصدِ یک ' + (viewMode==='creditor' ? 'بستانکار یا سهمِ یک مبدأ' : 'حساب') + '، روی کارتش کلیک کن</span>';
 heroPct = totalTarget>0 ? Math.min(100, Math.round(totalConfirmed*100/totalTarget)) : 0;
 heroTarget = money(totalTarget); heroConfirmed = money(totalConfirmed); heroRemain = money(totalRemain);
 }
 const heroBarWidth = heroPct==null ? 0 : heroPct;
 let html = '<div class="hero"><div class="hero-top"><span class="hero-label">' + heroLabel + '</span><span class="hero-pct">' + (heroPct==null ? '—' : heroPct + '%') + '</span></div><div class="hero-bar"><div class="hero-bar-fill" style="width:' + heroBarWidth + '%"></div></div>';
 html += '<div class="hero-stats"><div class="hero-stat"><span>سقف حساب</span><b>' + heroTarget + '</b></div><div class="hero-stat ok"><span>واریزی تا این لحظه</span><b>' + heroConfirmed + '</b></div><div class="hero-stat remain' + (heroOver?' over':'') + '"><span>' + heroRemainLabel + '</span><b>' + heroRemain + '</b></div></div></div>';
+html += '<div class="viewbar"><div class="seg"><button data-view="creditor" class="' + (viewMode==='creditor'?'on':'') + '">بر اساس بستانکار</button><button data-view="account" class="' + (viewMode==='account'?'on':'') + '">بر اساس حساب</button></div></div>';
 if(!accounts.length){
 html += '<div class="empty">برای این روز حسابی ثبت نشده است.</div>';
+} else if(viewMode==='creditor'){
+html += creditors.length ? '<div class="grid cgrid">' + creditors.map(function(c){ return creditorCard(c, countByDst, selC, selS); }).join('') + '</div>' : '<div class="empty">برای این روز حسابِ سقف‌دار ثبت نشده است.</div>';
 } else {
 html += '<div class="grid">';
 for(const a of accounts){
@@ -284,8 +387,11 @@ html += '</div></div>';
 }
 html += '</div>';
 }
-const receipts = selectedAccountId ? (data.receipts||[]).filter(function(r){ return r.account_id===selectedAccountId; }) : (data.receipts||[]);
-html += '<div class="section-title">فیش‌های این روز (' + receipts.length + ' مورد)' + (selectedAccountId?' <a href="#" id="clearAccountFilter" style="color:var(--gold);font-size:12px;margin-right:10px">نمایش همه حساب‌ها</a>':'') + '</div>';
+let receipts = data.receipts||[];
+if(selC){ receipts = receipts.filter(function(r){ return rkey(r,'dst')===selC.key && (!selS || rkey(r,'src')===selS.key); }); }
+else if(selectedAccountId){ receipts = receipts.filter(function(r){ return r.account_id===selectedAccountId; }); }
+const hasFilter = !!(selC || selectedAccountId);
+html += '<div class="section-title">فیش‌های این روز (' + receipts.length + ' مورد)' + (hasFilter?' <a href="#" id="clearAccountFilter" style="color:var(--gold);font-size:12px;margin-right:10px">نمایش همه</a>':'') + '</div>';
 if(!receipts.length){
 html += '<div class="empty">فیشی برای این روز ثبت نشده است.</div>';
 } else {
@@ -302,7 +408,16 @@ app.innerHTML = html;
 }
 document.getElementById('app').addEventListener('click', function(e){
 const clear = e.target.closest('#clearAccountFilter');
-if(clear){ e.preventDefault(); selectedAccountId = null; if(lastData) render(lastData); return; }
+if(clear){ e.preventDefault(); selectedAccountId = null; selCreditor = null; selSource = null; if(lastData) render(lastData); return; }
+const vb = e.target.closest('[data-view]');
+if(vb && lastData){ viewMode = vb.getAttribute('data-view'); try { localStorage.setItem('adminView', viewMode); } catch(err) {} selectedAccountId = null; selCreditor = null; selSource = null; render(lastData); return; }
+const cr = e.target.closest('[data-creditor]');
+if(cr && lastData){
+ const key = cr.getAttribute('data-creditor'), src = cr.getAttribute('data-src');
+ if(src){ if(selCreditor===key && selSource===src){ selSource = null; } else { selCreditor = key; selSource = src; } }
+ else { if(selCreditor===key && !selSource){ selCreditor = null; } else { selCreditor = key; selSource = null; } }
+ render(lastData); return;
+}
 const card = e.target.closest('[data-account-id]');
 if(card && lastData){
 const id = Number(card.getAttribute('data-account-id'));
