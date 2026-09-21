@@ -25,7 +25,7 @@
 :root { --bg:#0f1115; --panel:#181b22; --panel-2:#20242e; --line:#2b303c; --gold:#d4af6a; --ink:#e8e6e1; --dim:#8b93a3; --ok:#4caf6a; --warn:#e05a4e; }
 * { box-sizing:border-box; }
 body { margin:0; font-family:'Vazirmatn',sans-serif; background:var(--bg); color:var(--ink); padding:24px; }
-.wrap { max-width:960px; margin:0 auto; }
+.wrap { max-width:1240px; margin:0 auto; }
 .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
 h1 { font-size:20px; margin:0; font-weight:700; }
 .tabs { display:flex; gap:8px; background:var(--panel); padding:4px; border-radius:10px; }
@@ -68,6 +68,8 @@ h1 { font-size:20px; margin:0; font-weight:700; }
 .progress-bar.over { background:var(--warn); }
 .progress-pct.over { color:var(--warn); }
 .hero-stat.over span, .hero-stat.over b { color:var(--warn); }
+.hero-stat.ok b { color:var(--ok); }
+.hero-stat.remain b { color:var(--warn); }
 .empty { text-align:center; color:var(--dim); padding:60px 0; }
 .updated { text-align:center; font-size:11px; color:var(--dim); margin-top:24px; }
 table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden; font-size:13px; }
@@ -77,6 +79,43 @@ tr:last-child td { border-bottom:none; }
 .status { padding:2px 8px; border-radius:20px; font-size:11px; }
 .status.confirmed { background:rgba(76,175,106,.15); color:var(--ok); }
 .status.returned { background:rgba(224,90,78,.15); color:var(--warn); }
+/* ---- کارت حساب (طراحی نو) ---- */
+.grid { grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
+.acard { --accent:var(--gold); position:relative; display:flex; flex-direction:column; gap:12px; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px; cursor:pointer; overflow:hidden; transition:transform .15s ease,border-color .15s ease; }
+.acard::before { content:""; position:absolute; inset:0 0 auto 0; height:3px; background:var(--accent); }
+.acard:hover { transform:translateY(-2px); border-color:#3a4050; }
+.acard.selected { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+.acard.t-ok, .acard.t-full { --accent:var(--ok); }
+.acard.t-over { --accent:var(--warn); }
+.acard-top { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:2px; }
+.route { display:flex; align-items:center; gap:8px; min-width:0; font-weight:700; font-size:15px; }
+.route span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.route .dst { color:var(--gold); }
+.route svg { flex:none; color:var(--dim); }
+.pill { flex:none; font-size:11.5px; font-weight:700; padding:3px 11px; border-radius:99px; background:color-mix(in srgb,var(--accent) 16%,transparent); color:var(--accent); }
+.owner { display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--dim); min-width:0; }
+.owner svg { flex:none; opacity:.7; } .owner span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.amain { display:flex; align-items:center; gap:16px; padding:4px 2px 0; }
+.ring { position:relative; flex:none; width:72px; height:72px; }
+.ring svg { display:block; } .ring circle { fill:none; stroke-width:7; }
+.ring .track { stroke:#2b303c; } .ring .bar { stroke:var(--accent); stroke-linecap:round; }
+.ring b { position:absolute; inset:0; display:grid; place-items:center; font-size:14px; font-weight:800; color:var(--accent); direction:ltr; }
+.ahero { display:flex; flex-direction:column; gap:3px; min-width:0; flex:1; }
+.ahero small { font-size:12px; color:var(--dim); }
+.aval { display:flex; align-items:baseline; gap:6px; white-space:nowrap; direction:rtl; }
+.aval b { font-size:21px; font-weight:800; font-variant-numeric:tabular-nums; direction:ltr; }
+.aval em { font-style:normal; font-size:12px; color:var(--dim); }
+.aval.remain b { color:var(--warn); } .aval.done b { color:var(--ok); } .aval.over b { color:var(--warn); }
+.atoman { font-size:11.5px; color:var(--dim); font-variant-numeric:tabular-nums; }
+.afacts { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.afacts > div { display:flex; flex-direction:column; gap:2px; background:var(--panel-2); border:1px solid var(--line); border-radius:11px; padding:9px 11px; min-width:0; }
+.afacts small { font-size:11.5px; color:var(--dim); }
+.afacts b { font-size:13.5px; font-weight:800; font-variant-numeric:tabular-nums; direction:ltr; text-align:right; white-space:nowrap; }
+.afacts .ok b { color:var(--ok); }
+.afacts span { font-size:11px; color:var(--dim); font-variant-numeric:tabular-nums; }
+.ameta { display:flex; flex-wrap:wrap; gap:6px; }
+.ameta .badge { font-size:11px; padding:3px 10px; }
+.tot { color:var(--dim); font-size:12px; }
 </style>
 </head>
 <body>
@@ -208,42 +247,40 @@ heroTarget = money(totalTarget); heroConfirmed = money(totalConfirmed); heroRema
 }
 const heroBarWidth = heroPct==null ? 0 : heroPct;
 let html = '<div class="hero"><div class="hero-top"><span class="hero-label">' + heroLabel + '</span><span class="hero-pct">' + (heroPct==null ? '—' : heroPct + '%') + '</span></div><div class="hero-bar"><div class="hero-bar-fill" style="width:' + heroBarWidth + '%"></div></div>';
-html += '<div class="hero-stats"><div class="hero-stat"><span>سقف حساب</span><b>' + heroTarget + '</b></div><div class="hero-stat"><span>واریزی تا این لحظه</span><b>' + heroConfirmed + '</b></div><div class="hero-stat' + (heroOver?' over':'') + '"><span>' + heroRemainLabel + '</span><b>' + heroRemain + '</b></div></div></div>';
+html += '<div class="hero-stats"><div class="hero-stat"><span>سقف حساب</span><b>' + heroTarget + '</b></div><div class="hero-stat ok"><span>واریزی تا این لحظه</span><b>' + heroConfirmed + '</b></div><div class="hero-stat remain' + (heroOver?' over':'') + '"><span>' + heroRemainLabel + '</span><b>' + heroRemain + '</b></div></div></div>';
 if(!accounts.length){
 html += '<div class="empty">برای این روز حسابی ثبت نشده است.</div>';
 } else {
 html += '<div class="grid">';
 for(const a of accounts){
-// progress_percent فقط بعد از اولین فیش تأییدشده مقدار می‌گیره (null یعنی صفر، نه بی‌سقف)؛
-// معیار واقعیِ «سقف‌دار بودن» وجود target_amount>0 است، نه null/not-null بودن progress_percent.
 const hasTarget = Number(a.target_amount||0) > 0;
 const pct = hasTarget ? pctOf(a) : null;
 const idle = idleHours(a.last_receipt_at);
 const isIdle = idle!=null && idle>=3;
-// طبق خواسته‌ی کاربر: تیترِ کارت باید بگه «با کی معامله کرده» -- یعنی طرف‌حساب مبدأ (کسی که
-// امیرحسین ازش دریافت می‌کنه)، نه صاحب‌حسابِ مقصد که رو خیلی از کارت‌ها یکسانه و فرقی نشون نمی‌ده.
-const counterpartyLabel = a.source_party_name ? esc(a.source_party_name) : '—';
+const over = overOf(a) > 0;
+const remain = remainOf(a);
+const tone = over ? 'over' : (hasTarget && remain===0 ? 'full' : 'warn');
+const stateText = over ? 'اضافه‌واریز' : (a.status==='closed' || (hasTarget && remain===0) ? 'تکمیل' : 'فعال');
+const src = a.source_party_name ? esc(a.source_party_name) : '—';
+const dst = a.destination_party_name ? esc(a.destination_party_name) : '—';
 const receiptCount = todayCountByAccount[a.id]||0;
 const isSelected = selectedAccountId===a.id;
-html += '<div class="card ' + (isIdle?'idle':'') + (isSelected?' selected':'') + '" data-account-id="' + a.id + '" style="cursor:pointer" title="برای دیدن فقط فیش‌های این حساب کلیک کن">';
-html += '<div class="card-top"><div><div class="card-title">' + counterpartyLabel + '</div><div class="card-client">' + esc(a.client_name) + ' · → ' + (a.destination_party_name ? esc(a.destination_party_name) : '—') + '</div></div>';
-html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">';
+const C = 169.65, off = hasTarget ? (C*(1-Math.min(100,pct)/100)).toFixed(2) : C;
+const ring = hasTarget ? '<div class="ring"><svg viewBox="0 0 64 64" width="72" height="72"><circle class="track" cx="32" cy="32" r="27"/><circle class="bar" cx="32" cy="32" r="27" stroke-dasharray="' + C + '" stroke-dashoffset="' + off + '" transform="rotate(-90 32 32)"/></svg><b>' + pct + '%</b></div>' : '';
+const heroLabel = over ? 'اضافه‌واریز' : (hasTarget ? 'مانده تا سقف' : 'واریزی تا این لحظه');
+const heroVal = over ? overOf(a) : (hasTarget ? remain : Number(a.confirmed_total||0));
+const heroCls = over ? 'over' : (hasTarget ? (remain===0 ? 'done' : 'remain') : 'done');
+const owner = esc(a.owner_name||'—') + (a.bank_name && String(a.owner_name||'').indexOf(a.bank_name)<0 ? ' <span style="opacity:.8">· ' + esc(a.bank_name) + '</span>' : '');
+html += '<div class="acard t-' + tone + (isSelected?' selected':'') + '" data-account-id="' + a.id + '" title="برای دیدن فقط فیش‌های این حساب کلیک کن">';
+html += '<div class="acard-top"><div class="route"><span>' + src + '</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg><span class="dst">' + dst + '</span></div><span class="pill">' + stateText + '</span></div>';
+html += '<div class="owner"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><span>' + owner + '</span></div>';
+html += '<div class="amain">' + ring + '<div class="ahero"><small>' + heroLabel + '</small><div class="aval ' + heroCls + '"><b>' + money(heroVal) + '</b><em>ریال</em></div><span class="atoman">' + money(Math.floor(heroVal/10)) + ' تومان</span></div></div>';
+html += '<div class="afacts"><div><small>سقف حساب</small><b>' + (hasTarget ? money(a.target_amount) : 'ندارد') + '</b><span>' + (hasTarget ? money(Math.floor(Number(a.target_amount)/10)) + ' تومان' : '—') + '</span></div>';
+html += '<div class="ok"><small>واریزی تا این لحظه</small><b>' + money(a.confirmed_total) + '</b><span>' + money(Math.floor(Number(a.confirmed_total||0)/10)) + ' تومان</span></div></div>';
+html += '<div class="ameta"><span class="badge">' + receiptCount + ' فیش امروز</span>';
 if(isIdle) html += '<span class="badge idle">' + idle + ' ساعت راکد</span>';
 else if(idle!=null) html += '<span class="badge">' + idle + ' ساعت پیش</span>';
-html += '<span class="badge">' + receiptCount + ' فیش امروز</span>';
 html += '</div></div>';
-if(hasTarget){
-html += '<div class="progress-row"><div class="progress"><div class="progress-bar' + (overOf(a)>0?' over':'') + '" style="width:' + pct + '%"></div></div><span class="progress-pct' + (overOf(a)>0?' over':'') + '">' + pct + '%</span></div>';
-}
-html += '<div class="card-stats">';
-if(hasTarget) html += '<div class="stat-row"><span>سقف حساب</span><b>' + money(a.target_amount) + '</b></div>';
-html += '<div class="stat-row"><span>واریزی تا این لحظه</span><b>' + money(a.confirmed_total) + '</b></div>';
-if(hasTarget){
-if(overOf(a)>0) html += '<div class="stat-row over"><span>اضافه‌واریز</span><b>' + money(overOf(a)) + '</b></div>';
-else html += '<div class="stat-row remain"><span>مانده تا سقف</span><b>' + money(remainOf(a)) + '</b></div>';
-}
-html += '</div>';
-html += '</div>';
 }
 html += '</div>';
 }
