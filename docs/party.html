@@ -151,6 +151,10 @@ const toggle = document.getElementById('toggleHistory');
 if(toggle) toggle.onclick = function(){ showHistory = !showHistory; render(lastData); };
 }
 load();
+// این صفحه رو کارفرما معمولاً باز نگه می‌داره (روی گوشی)؛ بدونِ رفرشِ خودکار همون لحظه‌ی بازکردن یخ می‌زد و
+// فیش‌های تازه رو تا رفرشِ دستی نشون نمی‌داد. هر ۳۰ ثانیه، فقط وقتی تب دیده می‌شه (باتری/دیتا حروم نشه)، دوباره می‌خونه.
+setInterval(function(){ if(!document.hidden) load(); }, 30000);
+document.addEventListener('visibilitychange', function(){ if(!document.hidden) load(); });
 </script>
 </body>
 </html>

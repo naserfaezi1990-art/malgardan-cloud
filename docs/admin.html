@@ -220,17 +220,11 @@ const res = await fetch(url);
 const data = await res.json();
 return { ok: res.ok, data: data };
 }
-async function load(date){
-const app = document.getElementById('app');
-currentDate = date;
-selectedAccountId = null; selCreditor = null; selSource = null;
-if(!token){ app.innerHTML = '<div class="empty">دسترسی نامعتبر است.</div>'; return; }
-app.innerHTML = '<div class="empty">در حال بارگذاری...</div>';
-try {
-// فیش‌هایی که تاریخشون قدیم‌تر با رقم فارسی ذخیره شده («۱۴۰۵/۰۶/۲۸») با تاریخِ انگلیسی مطابقت نمی‌کنن و
-// سرور فقط برابریِ عینی چک می‌کنه؛ پس هر دو شکل رو می‌گیریم و با هم ادغام می‌کنیم تا هیچ فیشی جا نیفته.
+// فیش‌هایی که تاریخشون قدیم‌تر با رقم فارسی ذخیره شده («۱۴۰۵/۰۶/۲۸») با تاریخِ انگلیسی مطابقت نمی‌کنن و سرور فقط
+// برابریِ عینی چک می‌کنه؛ پس هر دو شکل رو می‌گیریم و با هم ادغام می‌کنیم تا هیچ فیشی جا نیفته.
+async function fetchAndMerge(date){
 const main = await fetchAdmin(date);
-if(!main.ok){ app.innerHTML = '<div class="empty">' + esc(main.data.error||'خطا') + '</div>'; return; }
+if(!main.ok) return { ok:false, error: main.data.error||'خطا' };
 const data = main.data;
 if(date){
 try {
@@ -242,11 +236,33 @@ legacy.data.receipts.forEach(function(r){ const k = r.sync_uuid||('id'+r.receipt
 }
 } catch(e) { /* فقط یه پشتیبانِ اضافه بود؛ نبودنش مهم نیست */ }
 }
-render(data);
+return { ok:true, data:data };
+}
+async function load(date){
+const app = document.getElementById('app');
+currentDate = date;
+selectedAccountId = null; selCreditor = null; selSource = null;
+if(!token){ app.innerHTML = '<div class="empty">دسترسی نامعتبر است.</div>'; return; }
+app.innerHTML = '<div class="empty">در حال بارگذاری...</div>';
+try {
+const r = await fetchAndMerge(date);
+if(!r.ok){ app.innerHTML = '<div class="empty">' + esc(r.error) + '</div>'; return; }
+render(r.data);
 } catch(e) {
 app.innerHTML = '<div class="empty">ارتباط برقرار نشد.</div>';
 }
 }
+// این صفحه رو مدیر معمولاً باز نگه می‌داره؛ بدونِ رفرشِ خودکار همون لحظه‌ی بازکردن یخ می‌زد و فیشِ تازه رو تا
+// رفرشِ دستی نشون نمی‌داد. برخلافِ load()، انتخابِ فعلیِ کارت/بستانکار رو دست‌نخورده نگه می‌داره.
+async function softRefresh(){
+if(!token || document.hidden) return;
+try {
+const r = await fetchAndMerge(currentDate);
+if(r.ok) render(r.data);
+} catch(e) { /* اتصال موقتاً قطع بود؛ دورِ بعدی دوباره امتحان می‌شه */ }
+}
+setInterval(softRefresh, 30000);
+document.addEventListener('visibilitychange', function(){ if(!document.hidden) softRefresh(); });
 let selectedAccountId = null;
 let selCreditor = null, selSource = null;
 let viewMode = 'creditor';
