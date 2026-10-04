@@ -74,13 +74,12 @@ h1 { font-size:20px; margin:0; font-weight:700; }
 .hero-stat.remain b { color:var(--warn); }
 .empty { text-align:center; color:var(--dim); padding:60px 0; }
 .updated { text-align:center; font-size:11px; color:var(--dim); margin-top:24px; }
-.promo { display:flex; align-items:center; gap:12px; margin:26px 0 8px; padding:12px 14px; background:var(--panel); border:1px solid var(--line); border-radius:14px; text-decoration:none; color:var(--ink); }
-.promo img { width:46px; height:46px; flex:none; object-fit:cover; border-radius:12px; }
-.promo-txt { display:flex; flex-direction:column; gap:2px; flex:1; min-width:0; }
-.promo-txt b { font-size:15px; color:var(--gold); }
-.promo-txt small { font-size:11.5px; color:var(--dim); line-height:1.6; }
-.promo-cta { flex:none; background:var(--gold); color:#1a1408; font-size:12px; font-weight:700; padding:7px 12px; border-radius:20px; direction:ltr; white-space:nowrap; }
-.promo:hover { border-color:var(--gold); }
+.foot { margin-top:26px; padding-top:14px; border-top:1px solid var(--line); text-align:center; font-size:11.5px; color:var(--dim); line-height:2; }
+.foot a { color:inherit; text-decoration:none; }
+.foot .by { display:inline-flex; align-items:center; gap:6px; }
+.foot .by img { width:16px; height:16px; object-fit:contain; }
+.foot b { color:var(--gold); font-weight:700; }
+.foot .tg { text-decoration:underline; text-underline-offset:3px; }
 
 table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden; font-size:13px; }
 th,td { padding:10px 12px; text-align:right; border-bottom:1px solid var(--line); }
@@ -467,7 +466,7 @@ html += '</div>';
 }
 html += sourceReportHtml(creditors);
 html += '<div class="updated">آخرین به‌روزرسانی: ' + new Date().toLocaleString('fa-IR') + '</div>';
-html += '<a class="promo" href="https://t.me/fishban_app" target="_blank" rel="noopener"><img src="brand.png" alt="فیش‌بان"><span class="promo-txt"><b>فیش‌بان</b><small>خواندن خودکار فیش بانکی و ثبت در حسابداری</small></span><span class="promo-cta">کانال تلگرام ‎@fishban_app</span></a>';
+html += '<div class="foot"><a class="by" href="https://t.me/fishban_app" target="_blank" rel="noopener"><img src="mark.png" alt=""><span>توسعه داده شده توسط <b>فیش‌بان</b></span></a><br>هوشمندانه‌تر از همیشه · <a class="tg" href="https://t.me/fishban_app" target="_blank" rel="noopener">@fishban_app</a></div>';
 app.innerHTML = html;
 }
 document.getElementById('app').addEventListener('click', function(e){

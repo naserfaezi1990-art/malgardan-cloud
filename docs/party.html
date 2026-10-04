@@ -6,57 +6,74 @@
 <meta name="robots" content="noindex,nofollow">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="فیش‌بان">
-<meta property="og:title" content="فیش‌بان">
-<meta property="og:description" content="مدیریت هوشمند واریزی و تسویه">
+<meta property="og:title" content="گزارش زنده‌ی حساب شما">
+<meta property="og:description" content="وضعیت واریزی‌ها و باقیمانده‌ی حساب، لحظه‌ای — فیش‌بان، هوشمندانه‌تر از همیشه">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="فیش‌بان">
-<meta name="twitter:description" content="مدیریت هوشمند واریزی و تسویه">
-<meta name="theme-color" content="#0F2A24">
+<meta name="twitter:title" content="گزارش زنده‌ی حساب شما">
+<meta name="twitter:description" content="وضعیت واریزی‌ها و باقیمانده‌ی حساب، لحظه‌ای — فیش‌بان">
+<meta name="theme-color" content="#faf6ef">
 <meta property="og:image" content="https://panel.fishbanapp.com/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:image" content="https://panel.fishbanapp.com/og.png">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="apple-mobile-web-app-title" content="گزارش تسویه">
-<title>گزارش تسویه</title>
+<meta name="apple-mobile-web-app-title" content="گزارش حساب">
+<title>گزارش حساب</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root { --brass:#b8925a; --ink:#3a2f26; --paper:#faf6ef; --paper-2:#f1e9d8; --line:#e3d5b8; --ok:#3f7d4f; --warn:#b3261e; }
+:root { --brass:#b8925a; --brass-d:#8a6a37; --ink:#3a2f26; --muted:#8f7f66; --paper:#faf6ef; --card:#fff; --line:#eadfc8; --ok:#3f7d4f; --warn:#b3261e; --soft:#f4ecdb; }
 * { box-sizing:border-box; }
-body { margin:0; font-family:'Vazirmatn',sans-serif; background:var(--paper); color:var(--ink); padding:20px; }
-.wrap { max-width:720px; margin:0 auto; }
-h1 { font-size:20px; margin:0 0 4px; }
-.sub { color:#8a7a63; font-size:13px; margin-bottom:20px; }
-.card { background:var(--paper-2); border:1px solid var(--line); border-radius:14px; padding:18px; margin-bottom:16px; }
-.card h2 { font-size:16px; margin:0 0 12px; }
-.progress { height:10px; background:#e9ddc4; border-radius:6px; overflow:hidden; margin:10px 0; }
-.progress-bar { height:100%; background:var(--brass); border-radius:6px; }
-.stats { display:flex; justify-content:space-between; font-size:13px; color:#6b5c47; }
-.stats b { color:var(--ink); font-size:15px; }
-table { width:100%; border-collapse:collapse; margin-top:14px; font-size:13px; }
-th,td { padding:8px 6px; text-align:right; border-bottom:1px solid var(--line); }
-th { color:#8a7a63; font-weight:600; }
-.status { padding:2px 8px; border-radius:20px; font-size:11px; }
+body { margin:0; font-family:'Vazirmatn',sans-serif; background:var(--paper); color:var(--ink); padding:18px 16px 28px; -webkit-text-size-adjust:100%; }
+.wrap { max-width:760px; margin:0 auto; }
+.top { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; font-size:12px; color:var(--muted); }
+.top .brandline { display:flex; align-items:center; gap:7px; font-weight:600; }
+.top .brandline img { width:24px; height:24px; object-fit:contain; }
+h1 { font-size:21px; margin:0 0 2px; font-weight:800; }
+.sub { color:var(--muted); font-size:13px; margin-bottom:16px; }
+.days { display:flex; gap:8px; margin-bottom:14px; }
+.day { appearance:none; border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:999px; padding:7px 15px; font:600 12.5px 'Vazirmatn',sans-serif; cursor:pointer; }
+.day small { font-weight:500; color:var(--muted); margin-right:6px; }
+.day.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+.day.on small { color:#d8cdb6; }
+.accts { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-bottom:16px; }
+.acct { background:var(--card); border:1.5px solid var(--line); border-radius:18px; padding:14px; cursor:pointer; text-align:right; transition:border-color .15s, box-shadow .15s, transform .15s; font-family:inherit; color:inherit; }
+.acct:hover { border-color:#d9c79f; }
+.acct.sel { border-color:var(--brass); box-shadow:0 6px 20px rgba(138,106,55,.16); }
+.acct .head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
+.acct .name { font-weight:700; font-size:14.5px; line-height:1.5; }
+.acct .tag { flex:none; font-size:10.5px; padding:2px 9px; border-radius:999px; background:var(--soft); color:var(--brass-d); }
+.acct .tag.done { background:#e2f0e4; color:var(--ok); }
+.acct .tag.over { background:#fbe4e2; color:var(--warn); }
+.acct .body { display:flex; align-items:center; gap:12px; }
+.ring { flex:none; width:58px; height:58px; position:relative; }
+.ring svg { width:58px; height:58px; transform:rotate(-90deg); }
+.ring b { position:absolute; inset:0; display:grid; place-items:center; font-size:12.5px; }
+.nums { flex:1; min-width:0; font-size:12px; color:var(--muted); line-height:1.9; }
+.nums div { display:flex; justify-content:space-between; gap:8px; }
+.nums b { color:var(--ink); font-size:13.5px; }
+.nums .rem b { color:var(--brass-d); }
+.hint { margin-top:10px; font-size:11px; color:var(--brass-d); text-align:center; }
+.dep { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:14px 14px 6px; }
+.dep h2 { margin:0 0 4px; font-size:15px; }
+.dep .meta { color:var(--muted); font-size:12px; margin-bottom:8px; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th, td { padding:9px 4px; text-align:right; border-bottom:1px solid var(--line); }
+th { color:var(--muted); font-weight:600; font-size:11.5px; }
+tr:last-child td { border-bottom:0; }
+.status { padding:2px 9px; border-radius:20px; font-size:11px; white-space:nowrap; }
 .status.confirmed { background:#e2f0e4; color:var(--ok); }
 .status.returned { background:#fbe4e2; color:var(--warn); }
-.empty { text-align:center; color:#8a7a63; padding:40px 0; }
-.updated { text-align:center; font-size:12px; color:#8a7a63; margin-top:24px; }
-.remaining { display:flex; justify-content:space-between; font-size:13px; color:#6b5c47; margin-top:6px; padding-top:8px; border-top:1px dashed var(--line); }
-.remaining b { color:var(--brass); font-size:15px; }
-.day-tag { font-size:11px; color:#8a7a63; background:#fff; border:1px solid var(--line); border-radius:20px; padding:2px 10px; }
-.history-toggle { text-align:center; margin:8px 0 16px; }
-.history-toggle a { color:#8a7a63; font-size:12px; text-decoration:underline; cursor:pointer; }
-.history-card { opacity:.75; }
-.promo { display:flex; align-items:center; gap:12px; margin:26px 0 8px; padding:12px 14px; background:#fff; border:1px solid var(--line); border-radius:14px; text-decoration:none; color:var(--ink); }
-.promo img { width:46px; height:46px; flex:none; object-fit:cover; border-radius:12px; }
-.promo-txt { display:flex; flex-direction:column; gap:2px; flex:1; min-width:0; }
-.promo-txt b { font-size:15px; color:var(--brass); }
-.promo-txt small { font-size:11.5px; color:#8a7a63; line-height:1.6; }
-.promo-cta { flex:none; background:var(--brass); color:#fff; font-size:12px; font-weight:600; padding:7px 12px; border-radius:20px; direction:ltr; white-space:nowrap; }
-.promo:hover { border-color:var(--brass); }
+.empty { text-align:center; color:var(--muted); padding:34px 0; font-size:13.5px; }
+.note { text-align:center; font-size:11px; color:var(--muted); margin-top:14px; }
+.foot { margin-top:26px; padding-top:14px; border-top:1px solid var(--line); text-align:center; font-size:11.5px; color:#a49378; line-height:2; }
+.foot a { color:inherit; text-decoration:none; }
+.foot .by { display:inline-flex; align-items:center; gap:6px; }
+.foot .by img { width:16px; height:16px; object-fit:contain; opacity:.9; }
+.foot b { color:var(--brass-d); font-weight:700; }
+.foot .tg { text-decoration:underline; text-underline-offset:3px; }
 </style>
 </head>
 <body>
@@ -69,98 +86,114 @@ function money(n){ return Number(n||0).toLocaleString('en-US'); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
 const FA_DIGITS = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
 function toFaDigits(v){ return String(v==null?'':v).replace(/\d/g, function(d){ return FA_DIGITS[Number(d)]; }); }
-function gregorianToJalali(gy, gm, gd){
-const g_d_m = [0,31,59,90,120,151,181,212,243,273,304,334];
-let gy2 = (gm > 2) ? (gy + 1) : gy;
-let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
-let jy = -1595 + (33 * Math.floor(days / 12053));
-days %= 12053;
-jy += 4 * Math.floor(days / 1461);
-days %= 1461;
-if (days > 365) { jy += Math.floor((days - 1) / 365); days = (days - 1) % 365; }
-let jm, jd;
-if (days < 186) { jm = 1 + Math.floor(days / 31); jd = 1 + (days % 31); }
-else { jm = 7 + Math.floor((days - 186) / 30); jd = 1 + ((days - 186) % 30); }
-return jy + '/' + String(jm).padStart(2,'0') + '/' + String(jd).padStart(2,'0');
-}
-function todayJalali(){
-const d = new Date();
-return gregorianToJalali(d.getFullYear(), d.getMonth()+1, d.getDate());
-}
 function toAsciiDigits(v){ return String(v==null?'':v).replace(/[۰-۹]/g, function(d){ return String(FA_DIGITS.indexOf(d)); }); }
-let showHistory = false;
+function gregorianToJalali(gy, gm, gd){
+  const g_d_m = [0,31,59,90,120,151,181,212,243,273,304,334];
+  let gy2 = (gm > 2) ? (gy + 1) : gy;
+  let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+  let jy = -1595 + (33 * Math.floor(days / 12053));
+  days %= 12053;
+  jy += 4 * Math.floor(days / 1461);
+  days %= 1461;
+  if (days > 365) { jy += Math.floor((days - 1) / 365); days = (days - 1) % 365; }
+  let jm, jd;
+  if (days < 186) { jm = 1 + Math.floor(days / 31); jd = 1 + (days % 31); }
+  else { jm = 7 + Math.floor((days - 186) / 30); jd = 1 + ((days - 186) % 30); }
+  return jy + '/' + String(jm).padStart(2,'0') + '/' + String(jd).padStart(2,'0');
+}
+function jalaliDaysAgo(n){ const d = new Date(Date.now() - n * 86400000); return gregorianToJalali(d.getFullYear(), d.getMonth()+1, d.getDate()); }
+let lastData = null, selDay = null, selAcct = null;
+
 async function load(){
-const app = document.getElementById('app');
-if(!token){ app.innerHTML = '<div class="empty">لینک نامعتبر است.</div>'; return; }
-try {
-const res = await apiFetch('/party?token=' + encodeURIComponent(token));
-const data = await res.json();
-if(!res.ok){ app.innerHTML = '<div class="empty">' + esc(data.error||'خطا') + '</div>'; return; }
-render(data);
-} catch(e) {
-app.innerHTML = '<div class="empty">ارتباط برقرار نشد. بعداً دوباره امتحان کن.</div>';
+  const app = document.getElementById('app');
+  if(!token){ app.innerHTML = '<div class="empty">لینک نامعتبر است.</div>'; return; }
+  try {
+    const res = await apiFetch('/party?token=' + encodeURIComponent(token));
+    const data = await res.json();
+    if(!res.ok){ app.innerHTML = '<div class="empty">' + esc(data.error||'خطا') + '</div>'; return; }
+    lastData = data; render();
+  } catch(e) {
+    if(!lastData) app.innerHTML = '<div class="empty">ارتباط برقرار نشد. بعداً دوباره امتحان کن.</div>';
+  }
 }
+
+function ring(pct, cls){
+  const r = 24, c = 2 * Math.PI * r, off = c * (1 - Math.min(100, Math.max(0, pct)) / 100);
+  const col = cls === 'over' ? '#b3261e' : (cls === 'done' ? '#3f7d4f' : '#b8925a');
+  return '<div class="ring"><svg viewBox="0 0 58 58"><circle cx="29" cy="29" r="' + r + '" fill="none" stroke="#efe4cd" stroke-width="6"/><circle cx="29" cy="29" r="' + r + '" fill="none" stroke="' + col + '" stroke-width="6" stroke-linecap="round" stroke-dasharray="' + c.toFixed(1) + '" stroke-dashoffset="' + off.toFixed(1) + '"/></svg><b>' + toFaDigits(Math.round(pct)) + '٪</b></div>';
 }
-let lastData = null;
-function accountCard(a, data, isHistory){
-const hasTarget = Number(a.target_amount||0) > 0;
-const pct = hasTarget ? Math.min(100, a.progress_percent==null ? 0 : a.progress_percent) : null;
-const receiptsForAccount = data.receipts.filter(function(r){ return r.account_id === a.account_id; });
-let html = '<div class="card' + (isHistory?' history-card':'') + '"><h2>' + esc(a.owner_name)
-  + (a.valid_jalali ? ' <span class="day-tag">' + a.valid_jalali + '</span>' : '') + '</h2>';
-if(pct!=null){
-html += '<div class="progress"><div class="progress-bar" style="width:' + pct + '%"></div></div>';
-html += '<div class="stats"><span>واریزی: <b>' + money(a.confirmed_total) + '</b> ریال</span><span>سقف: <b>' + money(a.target_amount) + '</b> ریال</span></div>';
-} else {
-html += '<div class="stats"><span>مجموع واریزی: <b>' + money(a.confirmed_total) + '</b> ریال</span></div>';
+
+function render(){
+  const data = lastData; if(!data) return;
+  const app = document.getElementById('app');
+  const partyName = (data.party && data.party.party_name) || '';
+  const clientName = (data.party && data.party.client_name) || '';
+  const today = jalaliDaysAgo(0), yesterday = jalaliDaysAgo(1);
+  // سرور هم فقط ۲ روز را می‌دهد؛ این فیلتر تضمین می‌کند حتی با پاسخِ کهنه هم چیزِ قدیمی‌تر نمایش داده نشود
+  const recentDays = [today, yesterday];
+  const receipts = (data.receipts || []).filter(function(r){ return recentDays.indexOf(toAsciiDigits(r.date_jalali)) >= 0; });
+  const recentIds = {}; receipts.forEach(function(r){ recentIds[r.account_id] = true; });
+  const accounts = (data.accounts || []).filter(function(a){ return recentDays.indexOf(toAsciiDigits(a.valid_jalali)) >= 0 || recentIds[a.account_id]; });
+  // هر حساب به یکی از دو روزِ قابل‌نمایش می‌رسد؛ حسابِ قدیمی‌تر که فیشِ تازه دارد با آخرین روزِ فیشش نشان داده می‌شود
+  function dayOf(a){
+    const v = toAsciiDigits(a.valid_jalali);
+    if(v === today || v === yesterday) return v;
+    const rs = receipts.filter(function(r){ return r.account_id === a.account_id; }).map(function(r){ return toAsciiDigits(r.date_jalali); });
+    return rs.indexOf(today) >= 0 ? today : (rs.indexOf(yesterday) >= 0 ? yesterday : today);
+  }
+  const byDay = {}; byDay[today] = []; byDay[yesterday] = [];
+  accounts.forEach(function(a){ byDay[dayOf(a)].push(a); });
+  const days = [[today, 'امروز'], [yesterday, 'دیروز']].filter(function(d){ return byDay[d[0]].length; });
+  let html = '<div class="top"><span class="brandline"><img src="mark.png" alt="">فیش‌بان</span><span>به‌روزرسانی ' + toFaDigits(new Date().toLocaleTimeString('fa-IR', {hour:'2-digit', minute:'2-digit'})) + '</span></div>';
+  html += '<h1>سلام ' + esc(partyName) + '</h1><div class="sub">' + esc(clientName) + '</div>';
+  if(!days.length){
+    html += '<div class="empty">برای ۲ روز اخیر حسابی ثبت نشده است.</div>';
+  } else {
+    if(!selDay || !byDay[selDay] || !byDay[selDay].length) selDay = days[0][0];
+    html += '<div class="days">' + days.map(function(d){ return '<button class="day' + (d[0]===selDay?' on':'') + '" data-day="' + d[0] + '">' + d[1] + '<small>' + toFaDigits(d[0]) + '</small></button>'; }).join('') + '</div>';
+    const list = byDay[selDay];
+    if(!selAcct || !list.some(function(a){ return a.account_id === selAcct; })) selAcct = list[0].account_id;
+    html += '<div class="accts">' + list.map(function(a){
+      const hasTarget = Number(a.target_amount||0) > 0;
+      const pct = hasTarget ? (a.progress_percent == null ? 0 : a.progress_percent) : 0;
+      const over = hasTarget && Number(a.confirmed_total||0) > Number(a.target_amount||0);
+      const done = hasTarget && !over && Number(a.remaining_amount||0) <= 0;
+      const cls = over ? 'over' : (done ? 'done' : '');
+      const tagTxt = over ? 'اضافه‌واریز' : (done ? 'تکمیل' : 'فعال');
+      let nums = '<div><span>واریزی</span><b>' + money(a.confirmed_total) + '</b></div>';
+      if(hasTarget){
+        nums += '<div><span>سقف</span><b>' + money(a.target_amount) + '</b></div>';
+        nums += over ? '<div class="rem"><span>اضافه‌واریز</span><b>' + money(Number(a.confirmed_total) - Number(a.target_amount)) + '</b></div>'
+                     : '<div class="rem"><span>مانده</span><b>' + money(a.remaining_amount) + '</b></div>';
+      }
+      return '<button class="acct' + (a.account_id===selAcct?' sel':'') + '" data-aid="' + a.account_id + '"><div class="head"><span class="name">' + esc(a.owner_name) + '</span><span class="tag ' + cls + '">' + tagTxt + '</span></div>'
+        + '<div class="body">' + (hasTarget ? ring(pct, cls) : '') + '<div class="nums">' + nums + '</div></div><div class="hint">' + (a.account_id===selAcct ? 'واریزی‌های این حساب در پایین' : 'مشاهده‌ی واریزی‌ها') + '</div></button>';
+    }).join('') + '</div>';
+    const cur = list.filter(function(a){ return a.account_id === selAcct; })[0];
+    const rs = receipts.filter(function(r){ return r.account_id === selAcct; });
+    const sum = rs.filter(function(r){ return r.status === 'confirmed'; }).reduce(function(s, r){ return s + Number(r.amount||0); }, 0);
+    html += '<div class="dep"><h2>واریزی‌های «' + esc(cur ? cur.owner_name : '') + '»</h2><div class="meta">' + toFaDigits(rs.length) + ' فیش · جمع تأییدشده ' + money(sum) + ' ریال</div>';
+    if(rs.length){
+      html += '<table><thead><tr><th>ردیف</th><th>مبلغ (ریال)</th><th>کد پیگیری</th><th>وضعیت</th></tr></thead><tbody>';
+      rs.forEach(function(r, i){
+        html += '<tr><td>' + toFaDigits(i+1) + '</td><td><b>' + money(r.amount) + '</b></td><td>' + esc(r.tracking_code||'—') + '</td><td><span class="status ' + r.status + '">' + (r.status==='confirmed'?'تأییدشده':'برگشتی') + '</span></td></tr>';
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div class="empty" style="padding:22px 0">هنوز فیشی برای این حساب ثبت نشده است.</div>';
+    }
+    html += '</div>';
+  }
+  html += '<div class="note">این صفحه فقط ۲ روز اخیر را نشان می‌دهد.</div>';
+  html += '<div class="foot"><a class="by" href="https://t.me/fishban_app" target="_blank" rel="noopener"><img src="mark.png" alt=""><span>توسعه داده شده توسط <b>فیش‌بان</b></span></a><br>هوشمندانه‌تر از همیشه · <a class="tg" href="https://t.me/fishban_app" target="_blank" rel="noopener">@fishban_app</a></div>';
+  app.innerHTML = html;
 }
-if(a.remaining_amount!=null){
-html += '<div class="remaining"><span>باقیمانده تا تسویه‌ی کامل</span><b>' + money(a.remaining_amount) + ' ریال</b></div>';
-}
-if(receiptsForAccount.length){
-html += '<table><thead><tr><th>ردیف</th><th>مبلغ</th><th>کد پیگیری</th><th>تاریخ</th><th>وضعیت</th></tr></thead><tbody>';
-receiptsForAccount.forEach(function(r, i){
-html += '<tr><td>' + toFaDigits(i+1) + '</td><td>' + money(r.amount) + '</td><td>' + esc(r.tracking_code||'—') + '</td><td>' + toFaDigits(esc(r.date_jalali||'')) + '</td><td><span class="status ' + r.status + '">' + (r.status==='confirmed'?'تأییدشده':'برگشتی') + '</span></td></tr>';
+document.getElementById('app').addEventListener('click', function(e){
+  const d = e.target.closest('[data-day]'); if(d){ selDay = d.getAttribute('data-day'); selAcct = null; render(); return; }
+  const a = e.target.closest('[data-aid]'); if(a){ selAcct = Number(a.getAttribute('data-aid')); render(); }
 });
-html += '</tbody></table>';
-}
-html += '</div>';
-return html;
-}
-function render(data){
-lastData = data;
-const app = document.getElementById('app');
-const partyName = (data.party && data.party.party_name) || '';
-const clientName = (data.party && data.party.client_name) || '';
-let html = '<h1>سلام ' + esc(partyName) + '</h1><div class="sub">' + esc(clientName) + '</div>';
-const today = todayJalali();
-const allAccounts = data.accounts || [];
-const todayAccounts = allAccounts.filter(function(a){ return toAsciiDigits(a.valid_jalali) === today; });
-const otherAccounts = allAccounts.filter(function(a){ return toAsciiDigits(a.valid_jalali) !== today; });
-if(!allAccounts.length){
-html += '<div class="empty">هنوز حسابی برای شما ثبت نشده است.</div>';
-} else {
-if(!todayAccounts.length){
-html += '<div class="empty">امروز حسابی برای شما ثبت نشده است.</div>';
-} else {
-for(const a of todayAccounts){ html += accountCard(a, data, false); }
-}
-if(otherAccounts.length){
-html += '<div class="history-toggle"><a id="toggleHistory">' + (showHistory ? 'بستن حساب‌های روزهای قبل' : 'نمایش حساب‌های روزهای قبل (' + toFaDigits(otherAccounts.length) + ')') + '</a></div>';
-if(showHistory){
-for(const a of otherAccounts){ html += accountCard(a, data, true); }
-}
-}
-}
-html += '<div class="updated">آخرین به‌روزرسانی: ' + new Date().toLocaleString('fa-IR') + '</div>';
-html += '<a class="promo" href="https://t.me/fishban_app" target="_blank" rel="noopener"><img src="brand.png" alt="فیش‌بان"><span class="promo-txt"><b>فیش‌بان</b><small>خواندن خودکار فیش بانکی و ثبت در حسابداری</small></span><span class="promo-cta">کانال تلگرام ‎@fishban_app</span></a>';
-app.innerHTML = html;
-const toggle = document.getElementById('toggleHistory');
-if(toggle) toggle.onclick = function(){ showHistory = !showHistory; render(lastData); };
-}
 load();
-// این صفحه رو کارفرما معمولاً باز نگه می‌داره (روی گوشی)؛ بدونِ رفرشِ خودکار همون لحظه‌ی بازکردن یخ می‌زد و
-// فیش‌های تازه رو تا رفرشِ دستی نشون نمی‌داد. هر ۳۰ ثانیه، فقط وقتی تب دیده می‌شه (باتری/دیتا حروم نشه)، دوباره می‌خونه.
+// این صفحه را کارفرما معمولاً باز نگه می‌دارد؛ هر ۳۰ ثانیه (فقط وقتی تب دیده می‌شود) دوباره می‌خواند.
 setInterval(function(){ if(!document.hidden) load(); }, 30000);
 document.addEventListener('visibilitychange', function(){ if(!document.hidden) load(); });
 </script>
