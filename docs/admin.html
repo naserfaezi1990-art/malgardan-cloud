@@ -75,7 +75,7 @@ h1 { font-size:20px; margin:0; font-weight:700; }
 .empty { text-align:center; color:var(--dim); padding:60px 0; }
 .updated { text-align:center; font-size:11px; color:var(--dim); margin-top:24px; }
 .promo { display:flex; align-items:center; gap:12px; margin:26px 0 8px; padding:12px 14px; background:var(--panel); border:1px solid var(--line); border-radius:14px; text-decoration:none; color:var(--ink); }
-.promo img { width:46px; height:46px; flex:none; object-fit:contain; }
+.promo img { width:46px; height:46px; flex:none; object-fit:cover; border-radius:12px; }
 .promo-txt { display:flex; flex-direction:column; gap:2px; flex:1; min-width:0; }
 .promo-txt b { font-size:15px; color:var(--gold); }
 .promo-txt small { font-size:11.5px; color:var(--dim); line-height:1.6; }
@@ -467,7 +467,7 @@ html += '</div>';
 }
 html += sourceReportHtml(creditors);
 html += '<div class="updated">آخرین به‌روزرسانی: ' + new Date().toLocaleString('fa-IR') + '</div>';
-html += '<a class="promo" href="https://t.me/fishban_app" target="_blank" rel="noopener"><img src="logo.png" alt="فیش‌بان"><span class="promo-txt"><b>فیش‌بان</b><small>خواندن خودکار فیش بانکی و ثبت در حسابداری</small></span><span class="promo-cta">کانال تلگرام ‎@fishban_app</span></a>';
+html += '<a class="promo" href="https://t.me/fishban_app" target="_blank" rel="noopener"><img src="brand.png" alt="فیش‌بان"><span class="promo-txt"><b>فیش‌بان</b><small>خواندن خودکار فیش بانکی و ثبت در حسابداری</small></span><span class="promo-cta">کانال تلگرام ‎@fishban_app</span></a>';
 app.innerHTML = html;
 }
 document.getElementById('app').addEventListener('click', function(e){
