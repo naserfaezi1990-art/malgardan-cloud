@@ -51,9 +51,10 @@ h1 { font-size:21px; margin:0 0 2px; font-weight:800; }
 .ring { flex:none; width:58px; height:58px; position:relative; }
 .ring svg { width:58px; height:58px; transform:rotate(-90deg); }
 .ring b { position:absolute; inset:0; display:grid; place-items:center; font-size:12.5px; }
-.nums { flex:1; min-width:0; font-size:12px; color:var(--muted); line-height:1.9; }
-.nums div { display:flex; justify-content:space-between; gap:8px; }
-.nums b { color:var(--ink); font-size:13.5px; }
+.nums { flex:1; min-width:0; font-size:12px; color:var(--muted); line-height:1.5; display:grid; gap:7px; }
+.nums div { display:grid; grid-template-columns:46px 1fr; align-items:baseline; gap:6px; padding-bottom:7px; border-bottom:1px dashed var(--line); }
+.nums div:last-child { border-bottom:0; padding-bottom:0; }
+.nums b { color:var(--ink); font-size:15px; letter-spacing:.2px; }
 .nums .rem b { color:var(--brass-d); }
 .hint { margin-top:10px; font-size:11px; color:var(--brass-d); text-align:center; }
 .dep { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:14px 14px 6px; }
