@@ -55,7 +55,7 @@ th { color:#8a7a63; font-weight:600; }
 <body>
 <div class="wrap" id="app"><div class="empty">در حال بارگذاری...</div></div>
 <script>
-const API_BASES = ['https://api.fishbanapp.com', 'https://fishbanapp.naserfaezi1990.workers.dev', 'https://malgardan-cloud.naserfaezi1990.workers.dev'];
+const API_BASES = ['https://api.fishbanapp.com', 'https://fishbanapp.naserfaezi1990.workers.dev'];
 async function apiFetch(path){ let last; for(const b of API_BASES){ try { return await fetch(b + path); } catch(e) { last = e; } } throw last; }
 const token = new URLSearchParams(location.search).get('token') || '';
 function money(n){ return Number(n||0).toLocaleString('en-US'); }
