@@ -29,7 +29,7 @@ const t = new Date(Date.now() + 3.5 * 3600 * 1000 - n * 86400000);
 return gregorianToJalali(t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate());
 }
 function isValidToken(token) {
-return typeof token === 'string' && /^[0-9a-f]{32,128}$/.test(token);
+return typeof token === 'string' && /^[0-9a-f]{14,128}$/.test(token);
 }
 export default {
 async fetch(request, env) {
