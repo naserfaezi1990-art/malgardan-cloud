@@ -12,10 +12,10 @@
 <meta name="twitter:title" content="فیش‌بان">
 <meta name="twitter:description" content="مدیریت هوشمند واریزی و تسویه">
 <meta name="theme-color" content="#0F2A24">
-<meta property="og:image" content="https://naserfaezi1990-art.github.io/malgardan-cloud/og.png">
+<meta property="og:image" content="https://panel.fishbanapp.com/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta name="twitter:image" content="https://naserfaezi1990-art.github.io/malgardan-cloud/og.png">
+<meta name="twitter:image" content="https://panel.fishbanapp.com/og.png">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="گزارش تسویه">
@@ -55,7 +55,8 @@ th { color:#8a7a63; font-weight:600; }
 <body>
 <div class="wrap" id="app"><div class="empty">در حال بارگذاری...</div></div>
 <script>
-const API = 'https://malgardan-cloud.naserfaezi1990.workers.dev';
+const API_BASES = ['https://api.fishbanapp.com', 'https://malgardan-cloud.naserfaezi1990.workers.dev'];
+async function apiFetch(path){ let last; for(const b of API_BASES){ try { return await fetch(b + path); } catch(e) { last = e; } } throw last; }
 const token = new URLSearchParams(location.search).get('token') || '';
 function money(n){ return Number(n||0).toLocaleString('en-US'); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
@@ -85,7 +86,7 @@ async function load(){
 const app = document.getElementById('app');
 if(!token){ app.innerHTML = '<div class="empty">لینک نامعتبر است.</div>'; return; }
 try {
-const res = await fetch(API + '/party?token=' + encodeURIComponent(token));
+const res = await apiFetch('/party?token=' + encodeURIComponent(token));
 const data = await res.json();
 if(!res.ok){ app.innerHTML = '<div class="empty">' + esc(data.error||'خطا') + '</div>'; return; }
 render(data);
