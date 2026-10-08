@@ -89,6 +89,14 @@ const b = await readJson(request, 2000);
 await sql.query('SELECT fb_set_admin($1, $2, $3)', [key, String(b.user || ''), String(b.password || '')]);
 return json({ ok: true });
 }
+if (url.pathname === '/credentials/client' && request.method === 'POST') {
+const key = request.headers.get('X-Sync-Key') || '';
+const b = await readJson(request, 2000);
+const cid = Number(b.client_id);
+if (!Number.isInteger(cid)) return json({ error: 'کارفرما نامعتبر است' }, 400);
+await sql.query('SELECT fb_set_client_pass($1, $2, $3, $4)', [key, cid, String(b.user || ''), String(b.password || '')]);
+return json({ ok: true });
+}
 if (url.pathname === '/credentials/party' && request.method === 'POST') {
 const key = request.headers.get('X-Sync-Key') || '';
 const b = await readJson(request, 2000);
@@ -114,7 +122,11 @@ return json({ session: r[0].t });
 if (url.pathname === '/admin/login' && request.method === 'POST') {
 const b = await readJson(request, 2000);
 if (!isValidSlug(b.c)) return json({ error: 'لینک نامعتبر است' }, 400);
-const r = await sql.query('SELECT fb_admin_login($1, $2, $3) AS t', [b.c, String(b.user || ''), String(b.password || '')]);
+const kid = b.k === undefined || b.k === null || b.k === '' ? null : Number(b.k);
+if (kid !== null && !Number.isInteger(kid)) return json({ error: 'لینک نامعتبر است' }, 400);
+const r = kid === null
+? await sql.query('SELECT fb_admin_login($1, $2, $3) AS t', [b.c, String(b.user || ''), String(b.password || '')])
+: await sql.query('SELECT fb_client_login($1, $2, $3, $4) AS t', [b.c, kid, String(b.user || ''), String(b.password || '')]);
 if (!r[0] || !r[0].t) return json({ error: 'نام کاربری یا رمز اشتباه است' }, 401);
 return json({ session: r[0].t });
 }
@@ -124,9 +136,12 @@ const slug = url.searchParams.get('c') || '';
 if (slug) {
 if (!isValidSlug(slug)) return json({ error: 'لینک نامعتبر است' }, 400);
 const session = bearer(request);
-const info = await sql.query('SELECT * FROM fb_admin_info($1, $2)', [slug, isValidSession(session) ? session : null]);
+const kRaw = url.searchParams.get('k');
+const kid = kRaw === null || kRaw === '' ? null : Number(kRaw);
+if (kid !== null && !Number.isInteger(kid)) return json({ error: 'لینک نامعتبر است' }, 400);
+const info = await sql.query('SELECT * FROM fb_admin_info($1, $2, $3)', [slug, isValidSession(session) ? session : null, kid]);
 if (!info.length) return json({ error: 'لینک پیدا نشد' }, 404);
-if (!info[0].needs_login) return json({ error: 'رمز اتاق فرمان هنوز در برنامه تعیین نشده است' }, 403);
+if (!info[0].needs_login) return json({ error: 'رمز این اتاق فرمان هنوز در برنامه تعیین نشده است' }, 403);
 if (!info[0].authorized) return json({ needs_login: true, tenant_name: info[0].tenant_name }, 401);
 const accounts = await sql.query('SELECT * FROM fb_admin_accounts($1)', [session]);
 const receipts = await sql.query('SELECT * FROM fb_admin_receipts($1, $2)', [session, date]);

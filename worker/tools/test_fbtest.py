@@ -113,6 +113,34 @@ for _ in range(5):
 check(raises(lambda: q("SELECT {S}.fb_admin_login('owner','amir','secret123')"), "locked"), "5 wrong passwords lock the login (even the right one)")
 q("DELETE FROM {S}.login_attempts")
 
+# per-client (کارفرما) manager links: a client sees ONLY its own accounts/receipts
+q("INSERT INTO {S}.accounts(tenant_id,id,client_id,client_name,owner_name,account_type,has_limit,target_amount,status,destination_party_id,destination_party_name,confirmed_total,allocated_total,receipt_count,account_created_at,synced_at) VALUES (1,50,2,'OtherClient','X','daily',true,10,'active',2,'D',0,0,0,'x',now())")
+q("INSERT INTO {S}.receipts(tenant_id,sync_uuid,receipt_id,account_id,account_owner,client_id,client_name,destination_party_id,destination_party_name,amount,status,date_gregorian,date_jalali,receipt_created_at,synced_at) VALUES (1,$1,77,50,'X',2,'OtherClient',2,'D',9,'confirmed',$2,'x','x',now())", [str(uuid.uuid4()), D0])
+check(len(q("SELECT * FROM {S}.fb_admin_accounts($1)", [tok])) == 2, "full manager sees every client")
+check(raises(lambda: q("SELECT {S}.fb_set_client_pass('nope',1,'amirh','secret123')"), "invalid_key"), "set_client_pass needs a valid key")
+check(raises(lambda: q("SELECT {S}.fb_set_client_pass($1,1,'ab','x')", [KA]), "weak_credentials"), "weak client credentials refused")
+q("SELECT {S}.fb_set_client_pass($1,1,'amirh','secret123')", [KA])
+ci = q("SELECT * FROM {S}.fb_admin_info('owner', NULL, 1)")[0]
+check(ci["needs_login"] is True and ci["authorized"] is False, "client link asks for login")
+check(q("SELECT * FROM {S}.fb_admin_info('owner', NULL, 2)")[0]["needs_login"] is False, "a client without a login has no link")
+check(q("SELECT {S}.fb_client_login('owner',1,'amirh','wrong') t")[0]["t"] is None, "wrong client password refused")
+ctok = q("SELECT {S}.fb_client_login('owner',1,'amirh','secret123') t")[0]["t"]
+check(ctok and len(ctok) == 64, "client login returns a session")
+ca = q("SELECT client_id FROM {S}.fb_admin_accounts($1)", [ctok])
+check(len(ca) == 1 and all(r["client_id"] == 1 for r in ca), f"client sees only its own accounts: {ca}")
+cr = q("SELECT client_id FROM {S}.fb_admin_receipts($1,NULL)", [ctok])
+check(len(cr) >= 1 and all(r["client_id"] == 1 for r in cr), "client sees only its own receipts")
+check(q("SELECT * FROM {S}.fb_admin_info('owner',$1,1)", [ctok])[0]["authorized"] is True, "client session opens its own page")
+check(q("SELECT * FROM {S}.fb_admin_info('owner',$1)", [ctok])[0]["authorized"] is False, "a client session cannot open the full manager panel")
+check(q("SELECT * FROM {S}.fb_admin_info('owner',$1,2)", [ctok])[0]["authorized"] is False, "a client session cannot open another client's page")
+check(q("SELECT * FROM {S}.fb_admin_info('owner',$1,1)", [tok])[0]["authorized"] is False, "the full manager session is not a client session (separate login)")
+for _ in range(5):
+    q("SELECT {S}.fb_client_login('owner',1,'amirh','wrong')")
+check(raises(lambda: q("SELECT {S}.fb_client_login('owner',1,'amirh','secret123')"), "locked"), "client login locks after 5 wrong passwords")
+q("DELETE FROM {S}.login_attempts")
+q("SELECT {S}.fb_set_client_pass($1,1,'','')", [KA])
+check(q("SELECT * FROM {S}.fb_admin_accounts($1)", [ctok]) == [], "removing the client login revokes its sessions")
+
 # party password
 check(raises(lambda: q("SELECT {S}.fb_set_party_pass($1,1,'ab','x')", [KA]), "weak_credentials"), "weak party credentials refused")
 q("SELECT {S}.fb_set_party_pass($1,1,'taheri','pw123456')", [KA])
@@ -130,5 +158,6 @@ q("INSERT INTO {S}.app_settings(key,value) VALUES ('admin_token','legacytoken')"
 check(q("SELECT {S}.is_valid_admin_token('legacytoken') v")[0]["v"] is False, "legacy admin link is disabled once tenant 1 has a login")
 q("UPDATE {S}.tenants SET admin_pass_hash=NULL, admin_user=NULL WHERE id=1")
 check(q("SELECT {S}.is_valid_admin_token('legacytoken') v")[0]["v"] is True, "legacy admin link works before a login is set")
-check(len(q("SELECT * FROM {S}.get_admin_accounts('legacytoken')")) == 1, "legacy link sees tenant 1 only")
+leg = q("SELECT tenant_id FROM {S}.get_admin_accounts('legacytoken')")
+check(len(leg) == 2 and all(r["tenant_id"] == 1 for r in leg), f"legacy link sees tenant 1 only: {leg}")
 print(f"PASS: multi-tenant cloud functions ({n} checks)")
