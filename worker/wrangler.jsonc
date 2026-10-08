@@ -1,5 +1,7 @@
 {
 "name": "fishbanapp",
 "main": "src/index.js",
-"compatibility_date": "2024-09-23"
+"compatibility_date": "2024-09-23",
+"keep_vars": true,
+"triggers": { "crons": ["30 20 * * *"] }
 }

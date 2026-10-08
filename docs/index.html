@@ -75,14 +75,44 @@ tr:last-child td { border-bottom:0; }
 .foot .by img { width:16px; height:16px; object-fit:contain; opacity:.9; }
 .foot b { color:var(--brass-d); font-weight:700; }
 .foot .tg { text-decoration:underline; text-underline-offset:3px; }
+
+.login { max-width:340px; margin:60px auto; background:#fff; border:1px solid #e6dcc6; border-radius:18px; padding:22px 20px; text-align:center; box-shadow:0 8px 30px rgba(120,90,40,.08); }
+.login h2 { margin:0 0 4px; font-size:17px; }
+.login p { margin:0 0 14px; color:#8a7c63; font-size:12.5px; }
+.login input { width:100%; box-sizing:border-box; padding:11px 12px; margin-bottom:10px; border:1px solid #d9ccb0; border-radius:12px; font:inherit; direction:ltr; text-align:left; }
+.login button { width:100%; padding:11px; border:0; border-radius:12px; background:#b8925a; color:#fff; font:inherit; font-weight:700; cursor:pointer; }
+.login .err { color:#b3261e; font-size:12.5px; min-height:18px; margin-bottom:6px; }
 </style>
 </head>
 <body>
 <div class="wrap" id="app"><div class="empty">در حال بارگذاری...</div></div>
 <script>
 const API_BASES = ['https://api.fishbanapp.com', 'https://fishbanapp.naserfaezi1990.workers.dev'];
-async function apiFetch(path){ let last; for(const b of API_BASES){ try { return await fetch(b + path); } catch(e) { last = e; } } throw last; }
+async function apiFetch(path, opts){ let last; for(const b of API_BASES){ try { return await fetch(b + path, opts); } catch(e) { last = e; } } throw last; }
 const token = (function(q){ return q.get('t') || q.get('token') || ''; })(new URLSearchParams(location.search));
+const LOGIN_SCOPE = 'p' + token;
+
+function sessKey(){ return 'fbs_' + LOGIN_SCOPE; }
+function getSession(){ try { return sessionStorage.getItem(sessKey()) || ''; } catch(e) { return ''; } }
+function setSession(v){ try { if(v) sessionStorage.setItem(sessKey(), v); else sessionStorage.removeItem(sessKey()); } catch(e) {} }
+function showLogin(title, loginPath, extra, onDone){
+  const app = document.getElementById('app');
+  app.innerHTML = '<form class="login" id="loginForm"><h2>' + esc(title || 'ورود') + '</h2><p>برای دیدن این صفحه نام کاربری و رمز را وارد کنید.</p>' +
+    '<input id="lgUser" autocomplete="username" placeholder="نام کاربری" autofocus><input id="lgPass" type="password" autocomplete="current-password" placeholder="رمز">' +
+    '<div class="err" id="lgErr"></div><button type="submit">ورود</button></form>';
+  document.getElementById('loginForm').onsubmit = async function(ev){
+    ev.preventDefault();
+    const err = document.getElementById('lgErr'); err.textContent = '';
+    try {
+      const body = Object.assign({ user: document.getElementById('lgUser').value.trim(), password: document.getElementById('lgPass').value }, extra);
+      const res = await apiFetch(loginPath, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if(!res.ok || !data.session){ err.textContent = data.error || 'ورود ناموفق بود'; return; }
+      setSession(data.session); onDone();
+    } catch(e) { err.textContent = 'ارتباط برقرار نشد'; }
+  };
+}
+
 function money(n){ return Number(n||0).toLocaleString('en-US'); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
 const FA_DIGITS = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
@@ -109,8 +139,14 @@ async function load(){
   const app = document.getElementById('app');
   if(!token){ app.innerHTML = '<div class="empty">لینک نامعتبر است.</div>'; return; }
   try {
-    const res = await apiFetch('/party?token=' + encodeURIComponent(token));
+    const sess = getSession();
+    const res = await apiFetch('/party?token=' + encodeURIComponent(token), sess ? { headers:{ Authorization:'Bearer ' + sess } } : undefined);
     const data = await res.json();
+    if(res.status === 401 && data.needs_login){
+      setSession(''); lastData = null;
+      showLogin(data.party_name, '/party/login', { token: token }, load);
+      return;
+    }
     if(!res.ok){ app.innerHTML = '<div class="empty">' + esc(data.error||'خطا') + '</div>'; return; }
     lastData = data; render();
   } catch(e) {

@@ -165,6 +165,13 @@ tr:last-child td { border-bottom:none; }
 .rtotal { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 10px; padding:16px; border:1px solid var(--warn); border-radius:14px; background:rgba(224,90,78,.07); }
 .rtotal span { color:var(--dim); font-size:13px; } .rtotal b { font-size:22px; font-weight:800; color:var(--warn); font-variant-numeric:tabular-nums; direction:ltr; }
 .rtotal em { font-style:normal; color:var(--dim); font-size:12px; } .rtotal .rtotal-sub { margin-inline-start:auto; font-size:12px; }
+
+.login { max-width:340px; margin:60px auto; background:#fff; border:1px solid #e6dcc6; border-radius:18px; padding:22px 20px; text-align:center; box-shadow:0 8px 30px rgba(120,90,40,.08); }
+.login h2 { margin:0 0 4px; font-size:17px; }
+.login p { margin:0 0 14px; color:#8a7c63; font-size:12.5px; }
+.login input { width:100%; box-sizing:border-box; padding:11px 12px; margin-bottom:10px; border:1px solid #d9ccb0; border-radius:12px; font:inherit; direction:ltr; text-align:left; }
+.login button { width:100%; padding:11px; border:0; border-radius:12px; background:#b8925a; color:#fff; font:inherit; font-weight:700; cursor:pointer; }
+.login .err { color:#b3261e; font-size:12.5px; min-height:18px; margin-bottom:6px; }
 </style>
 </head>
 <body>
@@ -180,8 +187,33 @@ tr:last-child td { border-bottom:none; }
 </div>
 <script>
 const API_BASES = ['https://api.fishbanapp.com', 'https://fishbanapp.naserfaezi1990.workers.dev'];
-async function apiFetch(path){ let last; for(const b of API_BASES){ try { return await fetch(b + path); } catch(e) { last = e; } } throw last; }
-const token = new URLSearchParams(location.search).get('token') || '';
+async function apiFetch(path, opts){ let last; for(const b of API_BASES){ try { return await fetch(b + path, opts); } catch(e) { last = e; } } throw last; }
+const _qs = new URLSearchParams(location.search);
+const token = _qs.get('token') || '';
+const slug = (_qs.get('c') || '').toLowerCase();
+const LOGIN_SCOPE = 'a' + (slug || token);
+
+function sessKey(){ return 'fbs_' + LOGIN_SCOPE; }
+function getSession(){ try { return sessionStorage.getItem(sessKey()) || ''; } catch(e) { return ''; } }
+function setSession(v){ try { if(v) sessionStorage.setItem(sessKey(), v); else sessionStorage.removeItem(sessKey()); } catch(e) {} }
+function showLogin(title, loginPath, extra, onDone){
+  const app = document.getElementById('app');
+  app.innerHTML = '<form class="login" id="loginForm"><h2>' + esc(title || 'ورود') + '</h2><p>برای دیدن این صفحه نام کاربری و رمز را وارد کنید.</p>' +
+    '<input id="lgUser" autocomplete="username" placeholder="نام کاربری" autofocus><input id="lgPass" type="password" autocomplete="current-password" placeholder="رمز">' +
+    '<div class="err" id="lgErr"></div><button type="submit">ورود</button></form>';
+  document.getElementById('loginForm').onsubmit = async function(ev){
+    ev.preventDefault();
+    const err = document.getElementById('lgErr'); err.textContent = '';
+    try {
+      const body = Object.assign({ user: document.getElementById('lgUser').value.trim(), password: document.getElementById('lgPass').value }, extra);
+      const res = await apiFetch(loginPath, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if(!res.ok || !data.session){ err.textContent = data.error || 'ورود ناموفق بود'; return; }
+      setSession(data.session); onDone();
+    } catch(e) { err.textContent = 'ارتباط برقرار نشد'; }
+  };
+}
+
 function money(n){ return Number(n||0).toLocaleString('en-US'); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
 function gregorianToJalali(gy, gm, gd){
@@ -222,17 +254,18 @@ function remainOf(a){ return Math.max(0, Number(a.target_amount||0) - Number(a.c
 // واریزی از سقف رد شده؟ «مانده: ۰» غلط بود؛ مقدار اضافه‌واریز نشون داده می‌شه (فقط برای حساب سقف‌دار)
 function overOf(a){ return Number(a.target_amount||0)>0 ? Math.max(0, Number(a.confirmed_total||0) - Number(a.target_amount||0)) : 0; }
 async function fetchAdmin(date){
-let url = '/admin?token=' + encodeURIComponent(token);
+let url = slug ? '/admin?c=' + encodeURIComponent(slug) : '/admin?token=' + encodeURIComponent(token);
 if(date) url += '&date=' + encodeURIComponent(date);
-const res = await apiFetch(url);
+const sess = getSession();
+const res = await apiFetch(url, (slug && sess) ? { headers:{ Authorization:'Bearer ' + sess } } : undefined);
 const data = await res.json();
-return { ok: res.ok, data: data };
+return { ok: res.ok, data: data, status: res.status };
 }
 // فیش‌هایی که تاریخشون قدیم‌تر با رقم فارسی ذخیره شده («۱۴۰۵/۰۶/۲۸») با تاریخِ انگلیسی مطابقت نمی‌کنن و سرور فقط
 // برابریِ عینی چک می‌کنه؛ پس هر دو شکل رو می‌گیریم و با هم ادغام می‌کنیم تا هیچ فیشی جا نیفته.
 async function fetchAndMerge(date){
 const main = await fetchAdmin(date);
-if(!main.ok) return { ok:false, error: main.data.error||'خطا' };
+if(!main.ok) return { ok:false, error: main.data.error||'خطا', login: !!(main.status === 401 && main.data.needs_login), tenant: main.data.tenant_name };
 const data = main.data;
 if(date){
 try {
@@ -250,10 +283,11 @@ async function load(date){
 const app = document.getElementById('app');
 currentDate = date;
 selectedAccountId = null; selCreditor = null; selSource = null;
-if(!token){ app.innerHTML = '<div class="empty">دسترسی نامعتبر است.</div>'; return; }
+if(!token && !slug){ app.innerHTML = '<div class="empty">دسترسی نامعتبر است.</div>'; return; }
 app.innerHTML = '<div class="empty">در حال بارگذاری...</div>';
 try {
 const r = await fetchAndMerge(date);
+if(!r.ok && r.login){ setSession(''); showLogin(r.tenant || 'اتاق فرمان', '/admin/login', { c: slug }, function(){ load(currentDate); }); return; }
 if(!r.ok){ app.innerHTML = '<div class="empty">' + esc(r.error) + '</div>'; return; }
 render(r.data);
 } catch(e) {
@@ -263,10 +297,11 @@ app.innerHTML = '<div class="empty">ارتباط برقرار نشد.</div>';
 // این صفحه رو مدیر معمولاً باز نگه می‌داره؛ بدونِ رفرشِ خودکار همون لحظه‌ی بازکردن یخ می‌زد و فیشِ تازه رو تا
 // رفرشِ دستی نشون نمی‌داد. برخلافِ load()، انتخابِ فعلیِ کارت/بستانکار رو دست‌نخورده نگه می‌داره.
 async function softRefresh(){
-if(!token || document.hidden) return;
+if((!token && !slug) || document.hidden || document.getElementById('loginForm')) return;
 try {
 const r = await fetchAndMerge(currentDate);
 if(r.ok) render(r.data);
+else if(r.login){ setSession(''); load(currentDate); }
 } catch(e) { /* اتصال موقتاً قطع بود؛ دورِ بعدی دوباره امتحان می‌شه */ }
 }
 setInterval(softRefresh, 30000);
