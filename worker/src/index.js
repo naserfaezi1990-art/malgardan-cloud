@@ -68,7 +68,7 @@ const { needs_login, authorized, ...party } = info[0];
 return json({ party, accounts: recentAccounts, receipts: recentReceipts, window_from: cutoff, protected: !!needs_login });
 }
 export default {
-async fetch(request, env) {
+async fetch(request, env, ctx) {
 if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders() });
 const url = new URL(request.url);
 const sql = neon(env.DATABASE_URL);
@@ -109,7 +109,26 @@ return json({ ok: !!(r[0] && r[0].ok) });
 if (url.pathname === '/party') {
 const token = url.searchParams.get('token') || '';
 if (!isValidToken(token)) return json({ error: 'لینک نامعتبر است' }, 400);
-return await partyView(sql, token, bearer(request));
+const session = bearer(request);
+// لینکِ بدون رمز: جوابِ ۱۵ ثانیه در Cloudflare کش می‌شود تا بازشدن‌های پشت‌سرهم دیتابیس (و هزینه‌ی Neon) را درگیر نکند.
+// لینکِ رمزدار هرگز کش نمی‌شود.
+const cacheOk = !session && typeof caches !== 'undefined' && caches.default;
+const cacheKey = cacheOk ? new Request('https://cache.fishbanapp.internal/party/' + token) : null;
+if (cacheOk) {
+const hit = await caches.default.match(cacheKey);
+if (hit) return new Response(await hit.text(), { status: 200, headers: corsHeaders() });
+}
+const res = await partyView(sql, token, session);
+if (cacheOk && res.status === 200) {
+const text = await res.clone().text();
+let open = false;
+try { open = JSON.parse(text).protected === false; } catch (e) { open = false; }
+if (open) {
+const put = caches.default.put(cacheKey, new Response(text, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=15' } }));
+if (ctx && ctx.waitUntil) ctx.waitUntil(put); else await put;
+}
+}
+return res;
 }
 if (url.pathname === '/party/login' && request.method === 'POST') {
 const b = await readJson(request, 2000);
