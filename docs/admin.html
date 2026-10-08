@@ -194,8 +194,8 @@ const slug = (_qs.get('c') || '').toLowerCase();
 const LOGIN_SCOPE = 'a' + (slug || token);
 
 function sessKey(){ return 'fbs_' + LOGIN_SCOPE; }
-function getSession(){ try { return sessionStorage.getItem(sessKey()) || ''; } catch(e) { return ''; } }
-function setSession(v){ try { if(v) sessionStorage.setItem(sessKey(), v); else sessionStorage.removeItem(sessKey()); } catch(e) {} }
+function getSession(){ try { return localStorage.getItem(sessKey()) || ''; } catch(e) { return ''; } }
+function setSession(v){ try { if(v) localStorage.setItem(sessKey(), v); else localStorage.removeItem(sessKey()); } catch(e) {} }
 function showLogin(title, loginPath, extra, onDone){
   const app = document.getElementById('app');
   app.innerHTML = '<form class="login" id="loginForm"><h2>' + esc(title || 'ورود') + '</h2><p>برای دیدن این صفحه نام کاربری و رمز را وارد کنید.</p>' +

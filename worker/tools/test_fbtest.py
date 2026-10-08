@@ -101,6 +101,8 @@ ok = q("SELECT * FROM {S}.fb_admin_info('owner', NULL)")[0]
 check(ok["needs_login"] is True and ok["authorized"] is False, "admin page asks for login")
 tok = q("SELECT {S}.fb_admin_login('owner','amir','secret123') t")[0]["t"]
 check(len(tok) == 64, "login returns a session token")
+exp = q("SELECT expires_at > now() + interval '55 days' AS long_ok, expires_at < now() + interval '61 days' AS cap_ok FROM {S}.sessions WHERE token_hash=$1", [fb_hash(tok)])[0]
+check(exp["long_ok"] and exp["cap_ok"], "manager session is remembered for ~60 days")
 check(q("SELECT * FROM {S}.fb_admin_info('owner',$1)", [tok])[0]["authorized"] is True, "session authorizes the admin page")
 check(len(q("SELECT * FROM {S}.fb_admin_accounts($1)", [tok])) == 1, "admin sees only its tenant's accounts")
 check(len(q("SELECT * FROM {S}.fb_admin_receipts($1,NULL)", [tok])) == 1, "admin sees only its tenant's receipts")

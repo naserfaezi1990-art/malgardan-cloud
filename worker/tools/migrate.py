@@ -34,9 +34,11 @@ def query(cs, sql, params=None):
         raise RuntimeError(e.read().decode(errors="replace")[:600])
 
 
-def statements(schema):
+def statements(schema, only=None):
     out = []
     for f in sorted((HERE.parent / "sql").glob("*.sql")):
+        if only and f.name != only:
+            continue
         for chunk in f.read_text(encoding="utf-8").split("-- @@"):
             body = "\n".join(l for l in chunk.splitlines() if not l.strip().startswith("--")).strip()
             if body:
@@ -48,6 +50,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--schema", default="fbtest")
     ap.add_argument("--rehearse", action="store_true")
+    ap.add_argument("--file", help="run only this file, e.g. 002_session_lifetime.sql (for files added after 001 was applied)")
     a = ap.parse_args()
     cs = connection_string()
     if a.rehearse:
@@ -57,7 +60,7 @@ def main():
         query(cs, f"CREATE SCHEMA {a.schema}")
         for t in ("parties", "accounts", "receipts", "app_settings"):
             query(cs, f"CREATE TABLE {a.schema}.{t} (LIKE public.{t} INCLUDING ALL)")
-    for i, s in enumerate(statements(a.schema), 1):
+    for i, s in enumerate(statements(a.schema, a.file), 1):
         try:
             query(cs, s)
         except Exception as e:
