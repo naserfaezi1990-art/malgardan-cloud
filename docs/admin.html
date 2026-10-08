@@ -11,7 +11,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="فیش‌بان">
 <meta name="twitter:description" content="مدیریت هوشمند واریزی و تسویه">
-<meta name="theme-color" content="#0F2A24">
+<meta name="theme-color" content="#faf6ef">
 <meta property="og:image" content="https://panel.fishbanapp.com/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root { --bg:#0f1115; --panel:#181b22; --panel-2:#20242e; --line:#2b303c; --gold:#d4af6a; --ink:#e8e6e1; --dim:#8b93a3; --ok:#4caf6a; --warn:#e05a4e; }
+:root { --bg:#faf6ef; --panel:#ffffff; --panel-2:#f4ecdb; --line:#eadfc8; --gold:#9a7338; --ink:#3a2f26; --dim:#8f7f66; --ok:#3f7d4f; --warn:#b3261e; }
 * { box-sizing:border-box; }
 body { margin:0; font-family:'Vazirmatn',sans-serif; background:var(--bg); color:var(--ink); padding:24px; }
 .wrap { max-width:1240px; margin:0 auto; }
@@ -32,7 +32,7 @@ body { margin:0; font-family:'Vazirmatn',sans-serif; background:var(--bg); color
 h1 { font-size:20px; margin:0; font-weight:700; }
 .tabs { display:flex; gap:8px; background:var(--panel); padding:4px; border-radius:10px; }
 .tabs button { background:none; border:none; color:var(--dim); padding:8px 16px; border-radius:8px; font-family:inherit; font-size:13px; cursor:pointer; }
-.tabs button.active { background:var(--gold); color:#1a1408; font-weight:600; }
+.tabs button.active { background:var(--gold); color:#fff; font-weight:600; }
 .hero { background:linear-gradient(135deg,var(--panel-2),var(--panel)); border:1px solid var(--line); border-radius:16px; padding:24px; margin-bottom:20px; }
 .hero-top { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:12px; }
 .hero-label { color:var(--dim); font-size:13px; line-height:1.9; }
@@ -43,7 +43,7 @@ h1 { font-size:20px; margin:0; font-weight:700; }
 .hero-stat span { color:var(--dim); font-size:11.5px; }
 .hero-stat b { font-size:15px; font-weight:700; direction:ltr; text-align:right; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
 @media (max-width:560px) { .hero-stats { grid-template-columns:1fr; gap:8px; } .hero-stat { flex-direction:row; justify-content:space-between; align-items:baseline; } }
-.hero-bar { height:14px; background:#2b303c; border-radius:8px; overflow:hidden; }
+.hero-bar { height:14px; background:#efe4cd; border-radius:8px; overflow:hidden; }
 .hero-bar-fill { height:100%; background:linear-gradient(90deg,#d4af6a,#f0d28f); border-radius:8px; }
 .section-title { font-size:14px; color:var(--dim); margin:28px 0 12px; }
 .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }
@@ -53,10 +53,10 @@ h1 { font-size:20px; margin:0; font-weight:700; }
 .card-top { display:flex; justify-content:space-between; align-items:start; margin-bottom:10px; }
 .card-title { font-size:14px; font-weight:600; }
 .card-client { font-size:11px; color:var(--dim); }
-.badge { font-size:10px; padding:2px 8px; border-radius:20px; background:#2b303c; color:var(--dim); white-space:nowrap; }
+.badge { font-size:10px; padding:2px 8px; border-radius:20px; background:#efe4cd; color:var(--dim); white-space:nowrap; }
 .badge.idle { background:rgba(224,90,78,.15); color:var(--warn); }
 .progress-row { display:flex; align-items:center; gap:10px; margin:10px 0 6px; }
-.progress { flex:1; height:8px; background:#2b303c; border-radius:6px; overflow:hidden; }
+.progress { flex:1; height:8px; background:#efe4cd; border-radius:6px; overflow:hidden; }
 .progress-bar { height:100%; background:var(--gold); border-radius:6px; }
 .progress-pct { font-size:12px; font-weight:700; color:var(--gold); min-width:34px; text-align:left; direction:ltr; }
 /* سقف/واریزی/مانده هر کدوم یه ردیفِ جدا با برچسب سمت راست و عدد سمت چپ -- عددهای ۱۲ رقمی کنار هم جا نمی‌شدن و به هم می‌چسبیدن */
@@ -92,7 +92,7 @@ tr:last-child td { border-bottom:none; }
 .grid { grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
 .acard { --accent:var(--gold); position:relative; display:flex; flex-direction:column; gap:12px; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px; cursor:pointer; overflow:hidden; transition:transform .15s ease,border-color .15s ease; }
 .acard::before { content:""; position:absolute; inset:0 0 auto 0; height:3px; background:var(--accent); }
-.acard:hover { transform:translateY(-2px); border-color:#3a4050; }
+.acard:hover { transform:translateY(-2px); border-color:#d8c9a8; }
 .acard.selected { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
 .acard.t-ok, .acard.t-full { --accent:var(--ok); }
 .acard.t-over { --accent:var(--warn); }
@@ -107,7 +107,7 @@ tr:last-child td { border-bottom:none; }
 .amain { display:flex; align-items:center; gap:16px; padding:4px 2px 0; }
 .ring { position:relative; flex:none; width:72px; height:72px; }
 .ring svg { display:block; } .ring circle { fill:none; stroke-width:7; }
-.ring .track { stroke:#2b303c; } .ring .bar { stroke:var(--accent); stroke-linecap:round; }
+.ring .track { stroke:#efe4cd; } .ring .bar { stroke:var(--accent); stroke-linecap:round; }
 .ring b { position:absolute; inset:0; display:grid; place-items:center; font-size:14px; font-weight:800; color:var(--accent); direction:ltr; }
 .ahero { display:flex; flex-direction:column; gap:3px; min-width:0; flex:1; }
 .ahero small { font-size:12px; color:var(--dim); }
@@ -129,18 +129,18 @@ tr:last-child td { border-bottom:none; }
 .viewbar { display:flex; justify-content:flex-start; margin:0 0 14px; }
 .seg { display:inline-flex; gap:4px; background:var(--panel); border:1px solid var(--line); padding:4px; border-radius:12px; }
 .seg button { background:none; border:none; color:var(--dim); padding:8px 18px; border-radius:9px; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; }
-.seg button.on { background:var(--gold); color:#1a1408; }
+.seg button.on { background:var(--gold); color:#fff; }
 .cgrid { grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); align-items:start; }
 .cname { font-size:19px; font-weight:800; color:var(--ink); }
 .sources { display:flex; flex-direction:column; gap:8px; padding-top:4px; border-top:1px dashed var(--line); }
 .sources-title { font-size:11.5px; color:var(--dim); font-weight:700; margin-top:8px; }
 .srow { display:flex; flex-direction:column; gap:5px; padding:9px 11px; background:var(--panel-2); border:1px solid var(--line); border-radius:11px; cursor:pointer; transition:border-color .12s ease; }
-.srow:hover { border-color:#3a4050; }
+.srow:hover { border-color:#d8c9a8; }
 .srow.active { border-color:var(--gold); box-shadow:0 0 0 1px var(--gold); }
 .srow-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .sname { font-size:13.5px; font-weight:700; }
 .spct { font-size:12px; font-weight:800; color:var(--gold); direction:ltr; }
-.sbar { height:6px; background:#2b303c; border-radius:6px; overflow:hidden; }
+.sbar { height:6px; background:#efe4cd; border-radius:6px; overflow:hidden; }
 .sbar i { display:block; height:100%; background:var(--gold); border-radius:6px; }
 .srow.full .sbar i { background:var(--ok); } .srow.full .spct { color:var(--ok); }
 .srow.over .sbar i { background:var(--warn); } .srow.over .spct { color:var(--warn); }
