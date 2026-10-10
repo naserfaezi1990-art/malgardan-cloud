@@ -67,6 +67,9 @@ tr:last-child td { border-bottom:0; }
 .status { padding:2px 9px; border-radius:20px; font-size:11px; white-space:nowrap; }
 .status.confirmed { background:#e2f0e4; color:var(--ok); }
 .status.returned { background:#fbe4e2; color:var(--warn); }
+.dir { padding:2px 9px; border-radius:20px; font-size:11px; white-space:nowrap; font-weight:600; }
+.dir.in { background:#e3eefb; color:#1b5fa8; }
+.dir.out { background:#f1e8fb; color:#6a3aa2; }
 .empty { text-align:center; color:var(--muted); padding:34px 0; font-size:13.5px; }
 .note { text-align:center; font-size:11px; color:var(--muted); margin-top:14px; }
 .foot { margin-top:26px; padding-top:14px; border-top:1px solid var(--line); text-align:center; font-size:11.5px; color:#a49378; line-height:2; }
@@ -209,11 +212,15 @@ function render(){
     const cur = list.filter(function(a){ return a.account_id === selAcct; })[0];
     const rs = receipts.filter(function(r){ return r.account_id === selAcct; });
     const sum = rs.filter(function(r){ return r.status === 'confirmed'; }).reduce(function(s, r){ return s + Number(r.amount||0); }, 0);
-    html += '<div class="dep"><h2>واریزی‌های «' + esc(cur ? cur.owner_name : '') + '»</h2><div class="meta">' + toFaDigits(rs.length) + ' فیش · جمع تأییدشده ' + money(sum) + ' ریال</div>';
+    const nIn = rs.filter(function(r){ return r.direction === 'in'; }).length, nOut = rs.filter(function(r){ return r.direction === 'out'; }).length;
+    const dirMeta = (nIn && nOut) ? ' · ' + toFaDigits(nIn) + ' دریافتی و ' + toFaDigits(nOut) + ' ارسالی' : '';
+    html += '<div class="dep"><h2>واریزی‌های «' + esc(cur ? cur.owner_name : '') + '»</h2><div class="meta">' + toFaDigits(rs.length) + ' فیش' + dirMeta + ' · جمع تأییدشده ' + money(sum) + ' ریال</div>';
     if(rs.length){
-      html += '<table><thead><tr><th>ردیف</th><th>مبلغ (ریال)</th><th>کد پیگیری</th><th>وضعیت</th></tr></thead><tbody>';
+      const hasDir = rs.some(function(r){ return r.direction === 'in' || r.direction === 'out'; });
+      html += '<table><thead><tr><th>ردیف</th>' + (hasDir ? '<th>جهت</th>' : '') + '<th>مبلغ (ریال)</th><th>کد پیگیری</th><th>وضعیت</th></tr></thead><tbody>';
       rs.forEach(function(r, i){
-        html += '<tr><td>' + toFaDigits(i+1) + '</td><td><b>' + money(r.amount) + '</b></td><td>' + esc(r.tracking_code||'—') + '</td><td><span class="status ' + r.status + '">' + (r.status==='confirmed'?'تأییدشده':'برگشتی') + '</span></td></tr>';
+        const dirCell = hasDir ? '<td><span class="dir ' + (r.direction === 'out' ? 'out' : 'in') + '">' + (r.direction === 'out' ? 'ارسال شد' : 'دریافت شد') + '</span></td>' : '';
+        html += '<tr><td>' + toFaDigits(i+1) + '</td>' + dirCell + '<td><b>' + money(r.amount) + '</b></td><td>' + esc(r.tracking_code||'—') + '</td><td><span class="status ' + r.status + '">' + (r.status==='confirmed'?'تأییدشده':'برگشتی') + '</span></td></tr>';
       });
       html += '</tbody></table>';
     } else {
