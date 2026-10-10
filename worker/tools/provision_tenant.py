@@ -22,6 +22,7 @@ def main():
     ap.add_argument("--rotate", action="store_true")
     ap.add_argument("--suspend", action="store_true")
     ap.add_argument("--resume", action="store_true")
+    ap.add_argument("--no-clip", action="store_true", help="do not copy the code to the clipboard")
     a = ap.parse_args()
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{1,40}", a.slug):
         raise SystemExit("slug: 2-41 chars, lowercase letters/digits/dash")
@@ -49,6 +50,14 @@ def main():
     print("tenant:", a.slug)
     print("CONNECT CODE (shown once; paste it in the customer's app: Settings > cloud):")
     print(a.slug + "~" + key)
+    # راحتیِ مالک: کد خودکار روی کلیپ‌بورد می‌رود تا لازم نباشد با ماوس انتخاب شود (با --no-clip خاموش می‌شود)
+    if not a.no_clip:
+        try:
+            import subprocess
+            subprocess.run(["clip"], input=(a.slug + "~" + key).encode("ascii"), check=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            print(">> The code is now COPIED to the clipboard: just paste it (Ctrl+V).")
+        except Exception:
+            print(">> (could not copy automatically; select the line above and copy it)")
     print("manager link:  https://panel.fishbanapp.com/admin.html?c=" + a.slug + "   (the customer sets the user/password inside the app)")
 
 

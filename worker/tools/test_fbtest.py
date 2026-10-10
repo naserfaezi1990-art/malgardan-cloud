@@ -160,4 +160,18 @@ q("UPDATE {S}.tenants SET admin_pass_hash=NULL, admin_user=NULL WHERE id=1")
 check(q("SELECT {S}.is_valid_admin_token('legacytoken') v")[0]["v"] is True, "legacy admin link works before a login is set")
 leg = q("SELECT tenant_id FROM {S}.get_admin_accounts('legacytoken')")
 check(len(leg) == 2 and all(r["tenant_id"] == 1 for r in leg), f"legacy link sees tenant 1 only: {leg}")
+# دروازه‌ی هوش مصنوعی: شمارشِ مصرف، سقفِ روزانه، قطعِ مشتری
+q("DELETE FROM {S}.ai_usage")
+check(raises(lambda: q("SELECT {S}.fb_ai_gate('nope-nope-nope-nope-nope')"), "invalid_key"), "ai gate refuses an unknown key")
+tid = q("SELECT {S}.fb_ai_gate($1) t", [KA])[0]["t"]
+check(tid == 1, f"gate returns the tenant id: {tid}")
+q("SELECT {S}.fb_ai_gate($1)", [KA]); q("SELECT {S}.fb_ai_error(1)")
+u = q("SELECT calls, errors FROM {S}.ai_usage WHERE tenant_id=1")[0]
+check(u["calls"] == 2 and u["errors"] == 1, f"usage counted per tenant/day: {u}")
+q("UPDATE {S}.tenants SET ai_daily_cap=2 WHERE id=1")
+check(raises(lambda: q("SELECT {S}.fb_ai_gate($1)", [KA]), "quota_exceeded"), "daily cap stops the tenant")
+q("UPDATE {S}.tenants SET ai_daily_cap=NULL WHERE id=1")
+q("UPDATE {S}.tenants SET status='suspended' WHERE id=1")
+check(raises(lambda: q("SELECT {S}.fb_ai_gate($1)", [KA]), "invalid_key"), "a suspended tenant cannot use the AI gateway")
+q("UPDATE {S}.tenants SET status='active' WHERE id=1")
 print(f"PASS: multi-tenant cloud functions ({n} checks)")

@@ -16,6 +16,7 @@ function mapDbError(err) {
 const m = String((err && err.message) || err);
 if (/invalid_key/.test(m)) return json({ error: 'کلید همگام‌سازی نامعتبر یا غیرفعال است' }, 401);
 if (/locked/.test(m)) return json({ error: 'تلاش‌های ناموفق زیاد بود؛ ۱۵ دقیقه بعد دوباره امتحان کنید' }, 429);
+if (/quota_exceeded/.test(m)) return json({ error: 'سهمیه‌ی امروزِ هوش مصنوعیِ شما تمام شد؛ با پشتیبانی تماس بگیرید' }, 429);
 if (/weak_credentials/.test(m)) return json({ error: 'نام کاربری حداقل ۳ و رمز حداقل ۶ کاراکتر باشد' }, 400);
 return null;
 }
@@ -82,6 +83,32 @@ const rows = (a) => (Array.isArray(a) ? a.length : 0);
 if (rows(body.receipts) > 1000 || rows(body.accounts) > 2000 || rows(body.parties) > 2000 || rows(body.deletes) > 2000) return json({ error: 'دسته خیلی بزرگ است' }, 413);
 const out = await sql.query('SELECT fb_sync($1, $2::jsonb) AS r', [key, JSON.stringify(body)]);
 return json({ ok: true, result: out[0].r });
+}
+// ---- دروازه‌ی هوش مصنوعی: کلیدِ Gemini فقط اینجاست؛ مشتری با کلید همگام‌سازیِ خودش می‌آید و مصرفش شمرده می‌شود
+if (url.pathname === '/gemini/generate' && request.method === 'POST') {
+const key = request.headers.get('X-Sync-Key') || '';
+if (key.length < 20 || key.length > 200) return json({ error: 'کلید همگام‌سازی نامعتبر است' }, 401);
+if (!env.GEMINI_API_KEY) return json({ error: 'کلید هوش مصنوعی روی سرور تنظیم نشده' }, 503);
+const raw = await request.text();
+if (raw.length > 14000000) return json({ error: 'تصویر خیلی بزرگ است' }, 413);
+let body;
+try { body = JSON.parse(raw); } catch (e) { return json({ error: 'درخواست نامعتبر است' }, 400); }
+const model = String(url.searchParams.get('model') || 'gemini-3.6-flash');
+if (!/^gemini-[a-z0-9.\-]{2,40}$/.test(model)) return json({ error: 'مدل نامعتبر است' }, 400);
+const gate = await sql.query('SELECT fb_ai_gate($1) AS t', [key]);
+const tenant = gate[0] && gate[0].t;
+const ctl = new AbortController();
+const timer = setTimeout(() => ctl.abort(), 45000);
+try {
+const g = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(env.GEMINI_API_KEY), {
+method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctl.signal });
+const text = await g.text();
+if (!g.ok && tenant) { try { await sql.query('SELECT fb_ai_error($1)', [tenant]); } catch (e) { /* شمارش خطا مهم نیست */ } }
+return new Response(text, { status: g.status, headers: corsHeaders() });
+} catch (e) {
+if (tenant) { try { await sql.query('SELECT fb_ai_error($1)', [tenant]); } catch (e2) { /* ignore */ } }
+return json({ error: 'سرویس هوش مصنوعی در دسترس نبود' }, 504);
+} finally { clearTimeout(timer); }
 }
 if (url.pathname === '/credentials/admin' && request.method === 'POST') {
 const key = request.headers.get('X-Sync-Key') || '';
