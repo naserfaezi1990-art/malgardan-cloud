@@ -30,6 +30,8 @@ body { margin:0; font-family:'Vazirmatn',sans-serif; background:var(--bg); color
 .wrap { max-width:1240px; margin:0 auto; }
 .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
 h1 { font-size:20px; margin:0; font-weight:700; }
+h1 small { display:block; font-size:12px; font-weight:500; color:var(--dim); margin-top:3px; }
+.login .welcome { color:#8a7c63; font-size:13px; margin-bottom:2px; }
 .tabs { display:flex; gap:8px; background:var(--panel); padding:4px; border-radius:10px; }
 .tabs button { background:none; border:none; color:var(--dim); padding:8px 16px; border-radius:8px; font-family:inherit; font-size:13px; cursor:pointer; }
 .tabs button.active { background:var(--gold); color:#fff; font-weight:600; }
@@ -199,7 +201,7 @@ function getSession(){ try { return localStorage.getItem(sessKey()) || ''; } cat
 function setSession(v){ try { if(v) localStorage.setItem(sessKey(), v); else localStorage.removeItem(sessKey()); } catch(e) {} }
 function showLogin(title, loginPath, extra, onDone){
   const app = document.getElementById('app');
-  app.innerHTML = '<form class="login" id="loginForm"><h2>' + esc(title || 'ورود') + '</h2><p>برای دیدن این صفحه نام کاربری و رمز را وارد کنید.</p>' +
+  app.innerHTML = '<form class="login" id="loginForm"><div class="welcome">خوش آمدید</div><h2>' + esc(title || 'ورود') + '</h2><p>برای دیدن اتاق فرمان نام کاربری و رمز را وارد کنید.</p>' +
     '<input id="lgUser" autocomplete="username" placeholder="نام کاربری" autofocus><input id="lgPass" type="password" autocomplete="current-password" placeholder="رمز">' +
     '<div class="err" id="lgErr"></div><button type="submit">ورود</button></form>';
   document.getElementById('loginForm').onsubmit = async function(ev){
@@ -411,8 +413,14 @@ function sourceReportHtml(creditors){
  h += '<div class="rtotal"><span>مجموعِ پر نکرده‌ی همه</span><b>' + money(totUnfilled) + '</b><em>ریال</em><span class="rtotal-sub">پر شده ' + money(totPaid) + ' از ' + money(totTarget) + '</span></div></div>';
  return h;
 }
+function greet(name){
+// بعد از ورود: «خوش آمدید، <نامِ کارفرما>»؛ نام از سرور (tenant_name) می‌آید و با esc امن است
+const h = document.querySelector('.top h1');
+if(h) h.innerHTML = (name ? 'خوش آمدید، <b>' + esc(name) + '</b>' : 'اتاق فرمان فیش‌بان') + '<small>اتاق فرمان فیش‌بان</small>';
+}
 function render(data){
 lastData = data;
+greet(data.tenant_name);
 const app = document.getElementById('app');
 // data.accounts کل عمر حسابه‌ست؛ اینجا فقط حساب‌های متعلق به همین روز (valid_jalali) رو
 // نگه می‌داریم تا اتاق فرمان دقیقاً همون چیزی رو نشون بده که تو خود فیش‌بان برای این روز ثبت شده.

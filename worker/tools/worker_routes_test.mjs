@@ -11,6 +11,7 @@ fs.writeFileSync(path.join(dir, 'node_modules/@neondatabase/serverless/package.j
 fs.writeFileSync(path.join(dir, 'node_modules/@neondatabase/serverless/index.js'),
   'export function neon(){ return { query: async (q, p) => globalThis.__db(q, p) }; }');
 fs.copyFileSync(path.resolve(import.meta.dirname, '../src/index.js'), path.join(dir, 'worker.js'));
+fs.copyFileSync(path.resolve(import.meta.dirname, '../src/prompts.js'), path.join(dir, 'prompts.js'));
 const worker = (await import(pathToFileURL(path.join(dir, 'worker.js')).href)).default;
 
 let n = 0;
@@ -30,6 +31,7 @@ globalThis.__db = async (q, p) => {
   if (q.includes('fb_admin_info')) return [{ tenant_name: 'T', needs_login: p[0] !== 'nopass', authorized: p[1] === SESSION }];
   if (q.includes('fb_admin_accounts') || q.includes('fb_admin_receipts')) return [];
   if (q.includes('fb_sync')) { if (p[0] !== KEY) throw new Error('invalid_key'); return [{ r: { receipts: 1 } }]; }
+  if (q.includes('fb_device_seen')) { if (globalThis.__devices === 'fail') throw new Error('function fb_device_seen does not exist'); return [{ n: globalThis.__devices }]; }
   if (q.includes('fb_set_admin')) { if (p[0] !== KEY) throw new Error('invalid_key'); if (p[2].length < 6) throw new Error('weak_credentials'); return [{}]; }
   if (q.includes('fb_set_party_pass')) return [{ ok: true }];
   return [];
@@ -69,6 +71,15 @@ r = await call('POST', '/sync', { headers: { 'X-Sync-Key': 'fbk_' + 'z'.repeat(4
 eq(r.status, 401, 'unknown key -> 401');
 r = await call('POST', '/sync', { headers: { 'X-Sync-Key': KEY }, body: { receipts: [{}] } });
 eq([r.status, r.json.ok], [200, true], 'valid key syncs');
+eq(r.json.other_devices, undefined, 'sync without an install id: no device field (old apps unchanged)');
+globalThis.__devices = 1;
+r = await call('POST', '/sync', { headers: { 'X-Sync-Key': KEY, 'X-Install-Id': 'ab12cd34ef567890' }, body: { receipts: [] } });
+eq([r.status, r.json.other_devices], [200, 1], 'sync reports another device using the same connect code');
+globalThis.__devices = 'fail';
+r = await call('POST', '/sync', { headers: { 'X-Sync-Key': KEY, 'X-Install-Id': 'ab12cd34ef567890' }, body: { receipts: [] } });
+eq([r.status, r.json.ok, r.json.other_devices], [200, true, undefined], 'before migration 006 the device check is skipped silently');
+r = await call('POST', '/sync', { headers: { 'X-Sync-Key': KEY, 'X-Install-Id': "x'; drop" }, body: { receipts: [] } });
+eq(r.json.other_devices, undefined, 'a malformed install id is ignored');
 r = await call('POST', '/sync', { headers: { 'X-Sync-Key': KEY }, body: { receipts: new Array(1001).fill({}) } });
 eq(r.status, 413, 'oversized batch refused');
 r = await call('POST', '/credentials/admin', { headers: { 'X-Sync-Key': KEY }, body: { user: 'amir', password: '123' } });
@@ -84,7 +95,7 @@ const GKEY = 'fbk_' + 'g'.repeat(40);
 let googleCalls = [];
 globalThis.fetch = async (url, opts) => {
   googleCalls.push({ url: String(url), body: opts && opts.body });
-  return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"amount":1}' }] } }] }), { status: googleStatus });
+  return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"amount":1}' }] } }], usageMetadata: { promptTokenCount: 1300, candidatesTokenCount: 210, thoughtsTokenCount: 2400 } }), { status: googleStatus });
 };
 let googleStatus = 200;
 const aiQueries = [];
@@ -92,6 +103,7 @@ globalThis.__db = async (q, p) => {
   aiQueries.push(q);
   if (q.includes('fb_ai_gate')) { if (p[0] !== GKEY) throw new Error('invalid_key'); if (globalThis.__quota) throw new Error('quota_exceeded'); return [{ t: 7 }]; }
   if (q.includes('fb_ai_error')) return [{}];
+  if (q.includes('fb_ai_usage')) { globalThis.__usage = p; if (globalThis.__usageFail) throw new Error('function fb_ai_usage does not exist'); return [{}]; }
   return [];
 };
 let a = await callAI({ DATABASE_URL: 'x', GEMINI_API_KEY: 'SECRET-GOOGLE-KEY' }, { 'X-Sync-Key': 'short' }, {});
@@ -105,6 +117,15 @@ a = await callAI({ DATABASE_URL: 'x', GEMINI_API_KEY: 'SECRET-GOOGLE-KEY' }, { '
 eq(a.status, 200, 'ai: valid key is forwarded to Google');
 eq([googleCalls.length, googleCalls[0].url.includes('key=SECRET-GOOGLE-KEY'), googleCalls[0].url.includes('gemini-3.6-flash')], [1, true, true], 'ai: the Google key is added by the Worker, default model');
 eq(a.text.includes('SECRET-GOOGLE-KEY'), false, 'ai: the Google key never appears in the response');
+eq(globalThis.__usage, [7, 'other', 'gemini-3.6-flash', 1300, 210, 2400], 'ai: tokens of the call are recorded per tenant (kind defaults to other)');
+a = await callAI({ DATABASE_URL: 'x', GEMINI_API_KEY: 'SECRET-GOOGLE-KEY' }, { 'X-Sync-Key': GKEY, 'X-Call-Kind': 'Fiche' }, { contents: [] });
+eq(globalThis.__usage[1], 'fiche', 'ai: call kind from the app header is normalised and recorded');
+a = await callAI({ DATABASE_URL: 'x', GEMINI_API_KEY: 'SECRET-GOOGLE-KEY' }, { 'X-Sync-Key': GKEY, 'X-Call-Kind': "x'; drop--" }, { contents: [] });
+eq(globalThis.__usage[1], 'xdrop', 'ai: a hostile kind header cannot inject anything');
+globalThis.__usageFail = true;
+a = await callAI({ DATABASE_URL: 'x', GEMINI_API_KEY: 'SECRET-GOOGLE-KEY' }, { 'X-Sync-Key': GKEY }, { contents: [] });
+eq(a.status, 200, 'ai: before migration 006 is applied (usage function missing) the customer still gets the answer');
+globalThis.__usageFail = false;
 a = await callAI({ DATABASE_URL: 'x', GEMINI_API_KEY: 'SECRET-GOOGLE-KEY' }, { 'X-Sync-Key': GKEY }, {}, '?model=../../evil');
 eq(a.status, 400, 'ai: model name is validated');
 globalThis.__quota = true;
