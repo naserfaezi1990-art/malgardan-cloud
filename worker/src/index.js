@@ -16,7 +16,14 @@ try { return text ? JSON.parse(text) : {}; } catch (e) { const x = new Error('ba
 function mapDbError(err) {
 const m = String((err && err.message) || err);
 if (/invalid_key/.test(m)) return json({ error: 'کلید همگام‌سازی نامعتبر یا غیرفعال است' }, 401);
-if (/locked/.test(m)) return json({ error: 'تلاش‌های ناموفق زیاد بود؛ ۱۵ دقیقه بعد دوباره امتحان کنید' }, 429);
+const lk = m.match(/locked(?::(\d+))?/);
+if (lk) {
+// قفلِ پلکانی (migration 009): fb_guard مدتِ باقی‌مانده را به ثانیه می‌دهد؛ نسخه‌ی قدیمیِ تابع فقط «locked» می‌داد (۱۵ دقیقه)
+const secs = Math.max(1, Number(lk[1] || 900));
+const faDigits = (v) => String(v).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
+const wait = secs < 60 ? faDigits(secs) + ' ثانیه' : faDigits(Math.ceil(secs / 60)) + ' دقیقه';
+return json({ error: 'تلاش‌های ناموفق زیاد بود؛ ' + wait + ' بعد دوباره امتحان کنید', retry_after: secs }, 429);
+}
 if (/quota_exceeded/.test(m)) return json({ error: 'سهمیه‌ی امروزِ فیش‌بانِ شما تمام شد؛ با پشتیبانی تماس بگیرید' }, 429);
 if (/weak_credentials/.test(m)) return json({ error: 'نام کاربری حداقل ۳ و رمز حداقل ۶ کاراکتر باشد' }, 400);
 return null;
