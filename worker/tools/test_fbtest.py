@@ -91,6 +91,25 @@ check(q("SELECT count(*) c FROM {S}.receipts WHERE tenant_id=2")[0]["c"] == "1",
 q("SELECT {S}.fb_sync($1,$2::jsonb)", [KB, json.dumps({"deletes": [sid]})])
 check(q("SELECT count(*) c FROM {S}.receipts WHERE tenant_id=2")[0]["c"] == "0", "owner tenant can delete its own receipt")
 
+# account deletes (migration 010): tenant-scoped; the account and its receipts go; an id re-used by a new account in the same batch wins
+acc_row = payload("PartyA", "aaaaaaaaaaaaaa", D0, D3)["accounts"][0]
+q("SELECT {S}.fb_sync($1,$2::jsonb)", [KA, json.dumps({"receipts": [{**payload("PartyA", "aaaaaaaaaaaaaa", D0, D3)["receipts"][0], "sync_uuid": str(uuid.uuid4()), "receipt_id": 77, "account_id": 1}]})])
+check(q("SELECT count(*) c FROM {S}.receipts WHERE tenant_id=1 AND account_id=1")[0]["c"] != "0", "tenant A has receipts on account 1 before the delete")
+q("SELECT {S}.fb_sync($1,$2::jsonb)", [KA, json.dumps({"accounts": [{**acc_row, "id": 5}]})])
+q("SELECT {S}.fb_sync($1,$2::jsonb)", [KB, json.dumps({"account_deletes": [5]})])
+check(q("SELECT count(*) c FROM {S}.accounts WHERE tenant_id=1 AND id=5")[0]["c"] == "1", "tenant B cannot delete tenant A's account")
+q("DELETE FROM {S}.accounts WHERE tenant_id=1 AND id=5")
+q("SELECT {S}.fb_sync($1,$2::jsonb)", [KB, json.dumps({"accounts": [acc_row]})])   # B's own account 1 is back (same local id as A's)
+r = q("SELECT {S}.fb_sync($1,$2::jsonb) r", [KA, json.dumps({"account_deletes": [1]})])[0]["r"]
+check(r["accounts_deleted"] == 1 and q("SELECT count(*) c FROM {S}.accounts WHERE tenant_id=1")[0]["c"] == "0", f"deleted account disappears: {r}")
+check(q("SELECT count(*) c FROM {S}.receipts WHERE tenant_id=1 AND account_id=1")[0]["c"] == "0", "its receipts disappear with it")
+check(q("SELECT count(*) c FROM {S}.accounts WHERE tenant_id=2")[0]["c"] == "1", "the other tenant's account 1 is untouched")
+q("SELECT {S}.fb_sync($1,$2::jsonb)", [KA, json.dumps({"accounts": [acc_row]})])
+r = q("SELECT {S}.fb_sync($1,$2::jsonb) r", [KA, json.dumps({"account_deletes": [1], "accounts": [{**acc_row, "owner_name": "NEW"}]})])[0]["r"]
+check(q("SELECT owner_name FROM {S}.accounts WHERE tenant_id=1 AND id=1")[0]["owner_name"] == "NEW", "an id re-used for a new account in the same batch survives")
+check(q("SELECT {S}.fb_sync($1,'{}'::jsonb) r", [KA])[0]["r"]["accounts_deleted"] == 0, "old payloads (no account_deletes) behave as before")
+q("SELECT {S}.fb_sync($1,$2::jsonb)", [KA, json.dumps({"receipts": payload("PartyA", "aaaaaaaaaaaaaa", D0, D3)["receipts"]})])   # restore tenant A's one in-window receipt for the checks below
+
 # admin login: weak credentials refused, good ones work, wrong ones lock out, tenants are isolated
 check(raises(lambda: q("SELECT {S}.fb_set_admin($1,'ab','123')", [KA]), "weak_credentials"), "weak admin credentials refused")
 check(raises(lambda: q("SELECT {S}.fb_set_admin('nope','admin','secret123')"), "invalid_key"), "set_admin needs a valid key")
@@ -108,9 +127,9 @@ check(len(q("SELECT * FROM {S}.fb_admin_accounts($1)", [tok])) == 1, "admin sees
 check(len(q("SELECT * FROM {S}.fb_admin_receipts($1,NULL)", [tok])) == 1, "admin sees only its tenant's receipts")
 check(q("SELECT * FROM {S}.fb_admin_accounts('bogus')") == [], "bogus session sees nothing")
 check(q("SELECT * FROM {S}.fb_admin_info('beta',$1)", [tok])[0]["authorized"] is False, "owner's session does not open another tenant's panel")
-for _ in range(5):
+for _ in range(3):   # migration 009 (stepwise): the 3rd wrong password starts a 1-minute lock
     check(q("SELECT {S}.fb_admin_login('owner','amir','wrong-pass') t")[0]["t"] is None, "wrong admin password returns no session")
-check(raises(lambda: q("SELECT {S}.fb_admin_login('owner','amir','secret123')"), "locked"), "5 wrong passwords lock the login (even the right one)")
+check(raises(lambda: q("SELECT {S}.fb_admin_login('owner','amir','secret123')"), "locked"), "3 wrong passwords lock the login (even the right one)")
 q("DELETE FROM {S}.login_attempts")
 
 # per-client (کارفرما) manager links: a client sees ONLY its own accounts/receipts
@@ -134,9 +153,9 @@ check(q("SELECT * FROM {S}.fb_admin_info('owner',$1,1)", [ctok])[0]["authorized"
 check(q("SELECT * FROM {S}.fb_admin_info('owner',$1)", [ctok])[0]["authorized"] is False, "a client session cannot open the full manager panel")
 check(q("SELECT * FROM {S}.fb_admin_info('owner',$1,2)", [ctok])[0]["authorized"] is False, "a client session cannot open another client's page")
 check(q("SELECT * FROM {S}.fb_admin_info('owner',$1,1)", [tok])[0]["authorized"] is False, "the full manager session is not a client session (separate login)")
-for _ in range(5):
+for _ in range(3):
     q("SELECT {S}.fb_client_login('owner',1,'amirh','wrong')")
-check(raises(lambda: q("SELECT {S}.fb_client_login('owner',1,'amirh','secret123')"), "locked"), "client login locks after 5 wrong passwords")
+check(raises(lambda: q("SELECT {S}.fb_client_login('owner',1,'amirh','secret123')"), "locked"), "client login locks after 3 wrong passwords")
 q("DELETE FROM {S}.login_attempts")
 q("SELECT {S}.fb_set_client_pass($1,1,'','')", [KA])
 check(q("SELECT * FROM {S}.fb_admin_accounts($1)", [ctok]) == [], "removing the client login revokes its sessions")

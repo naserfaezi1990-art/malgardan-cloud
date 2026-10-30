@@ -180,7 +180,7 @@ if (key.length < 20 || key.length > 200) return json({ error: 'کلید همگا
 { const blocked = await deviceGate(sql, key, request); if (blocked) return blocked; }
 const body = await readJson(request, MAX_SYNC_BYTES);
 const rows = (a) => (Array.isArray(a) ? a.length : 0);
-if (rows(body.receipts) > 1000 || rows(body.accounts) > 2000 || rows(body.parties) > 2000 || rows(body.deletes) > 2000) return json({ error: 'دسته خیلی بزرگ است' }, 413);
+if (rows(body.receipts) > 1000 || rows(body.accounts) > 2000 || rows(body.parties) > 2000 || rows(body.deletes) > 2000 || rows(body.account_deletes) > 2000) return json({ error: 'دسته خیلی بزرگ است' }, 413);
 const out = await sql.query('SELECT fb_sync($1, $2::jsonb) AS r', [key, JSON.stringify(body)]);
 // همین کد اتصال روی کامپیوترِ دیگری هم کار می‌کند؟ (شناسه از روی سخت‌افزار، نه دیتابیس؛ قبل از اجرای migrationِ ۰۰۶ بی‌صدا رد می‌شود)
 let otherDevices;
